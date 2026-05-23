@@ -212,14 +212,13 @@ class VisualizerScreen(Screen):
             with Vertical(id="right-panel"):
                 with Container(id="grid-container"):
                     yield viz_widget
+                yield Label("", id="step-explanation")
                 with Horizontal(id="info-row"):
                     yield VariablesPanel(id="vars-panel")
                     yield LegendWidget(
                         entries=self._renderer.legend_entries(),
                         id="legend",
                     )
-
-        yield Label("", id="step-explanation")
 
         with Container(id="input-bar"):
             with Horizontal(id="input-row"):
