@@ -11,10 +11,9 @@ from __future__ import annotations
 
 def main() -> None:
     """Launch the neonodes TUI application."""
-    from neonodes.problems import count_islands
     from neonodes.app import NeonodesApp
 
-    app = NeonodesApp(problem_module=count_islands)
+    app = NeonodesApp()
     app.run()
 
 

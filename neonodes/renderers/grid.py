@@ -2,9 +2,9 @@
 grid.py — Textual Widget that renders a 2D grid with per-cell color states.
 
 Cell states:
-  'visited'  — teal  (#4ECDC4)
-  'current'  — coral (#FF6B6B)
-  'start'    — gold  (#FFE66D)
+  'visited'  — green  (#9ECE6A)
+  'current'  — red    (#F7768E)
+  'start'    — yellow (#E0AF68)
   default    — dark panel bg, value determines land/water styling
 """
 
@@ -17,14 +17,15 @@ from textual.app import RenderResult
 
 
 # Colour palette
-COLOR_VISITED = "#4ECDC4"
-COLOR_CURRENT = "#FF6B6B"
-COLOR_START = "#FFE66D"
-COLOR_LAND = "#2A9D8F"
-COLOR_WATER = "#1A1A2E"
-COLOR_TEXT_LAND = "#E8F4F8"
-COLOR_TEXT_WATER = "#4A4A6A"
-COLOR_INDEX = "#666688"
+COLOR_VISITED  = "#9ECE6A"   # green text
+BG_VISITED     = "#1A2814"   # dark green bg
+COLOR_CURRENT  = "#F7768E"   # red/coral text
+BG_CURRENT     = "#2A1420"   # dark red bg
+COLOR_LAND     = "#73DACA"   # teal text
+BG_LAND        = "#142028"   # dark teal bg
+COLOR_WATER    = "#565F89"   # muted text
+BG_WATER       = "#1A1A2E"   # dark bg
+COLOR_INDEX    = "#3D4566"   # dim index numbers
 
 
 class GridWidget(Widget):
@@ -32,8 +33,8 @@ class GridWidget(Widget):
 
     DEFAULT_CSS = """
     GridWidget {
-        border: solid #333355;
-        background: #0D0D1A;
+        border: solid #3D4566;
+        background: #1E2230;
         padding: 1 2;
         height: auto;
         min-height: 10;
@@ -80,7 +81,7 @@ class GridWidget(Widget):
 
         # Separator
         sep_len = 5 + cols * 4
-        lines.append(Text("─" * sep_len, style="#333355"))
+        lines.append(Text("─" * sep_len, style=COLOR_INDEX))
 
         for r in range(rows):
             row_text = Text()
@@ -103,12 +104,10 @@ class GridWidget(Widget):
         label = str(val)
 
         if state == "current":
-            return Text(f"[{label}]", style=f"bold {COLOR_CURRENT} on #3D1A1A")
+            return Text(f" {label} ", style=f"bold {COLOR_CURRENT} on {BG_CURRENT}")
         elif state == "visited":
-            return Text(f"[{label}]", style=f"bold {COLOR_VISITED} on #0A2020")
-        elif state == "start":
-            return Text(f"[{label}]", style=f"bold {COLOR_START} on #2A2010")
+            return Text(f" {label} ", style=f"bold {COLOR_VISITED} on {BG_VISITED}")
         elif val == 1:
-            return Text(f" {label} ", style=f"{COLOR_TEXT_LAND} on #1A3A35")
+            return Text(f" {label} ", style=f"{COLOR_LAND} on {BG_LAND}")
         else:
-            return Text(f" {label} ", style=f"{COLOR_TEXT_WATER} on #111122")
+            return Text(f" {label} ", style=f"{COLOR_WATER} on {BG_WATER}")
