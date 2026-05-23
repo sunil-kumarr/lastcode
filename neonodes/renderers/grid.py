@@ -85,50 +85,74 @@ class GridWidget(Widget):
         rows = len(self._grid)
         cols = len(self._grid[0])
 
-        # Compute arrow: direction from prev_cell to current_cell
+        # Compute arrow direction
         arrow_cell: tuple[int, int] | None = None
-        arrow_char = "·"
+        arrow_char = " "
         if self._prev_cell and self._current_cell:
-            pr, pc = self._prev_cell
-            cr, cc = self._current_cell
-            delta = (cr - pr, cc - pc)
+            delta = (self._current_cell[0] - self._prev_cell[0],
+                     self._current_cell[1] - self._prev_cell[1])
             if delta in _ARROWS:
                 arrow_cell = self._prev_cell
                 arrow_char = _ARROWS[delta]
 
+        CELL_W = 5   # inner width of each cell (chars)
+        SEP = "─" * CELL_W
+        idx_pad = "     "   # 5 chars to align with row-index prefix
+
         lines: list[Text] = []
 
-        # Column index header
-        header = Text("      ", style=COLOR_INDEX)
+        # ── Column headers ──────────────────────────────────────────────
+        header = Text(idx_pad + " ", style=COLOR_INDEX)
         for c in range(cols):
             header.append(f"  {c}  ", style=COLOR_INDEX)
+            if c < cols - 1:
+                header.append(" ", style=COLOR_INDEX)
         lines.append(header)
 
-        lines.append(Text("─" * (6 + cols * 5), style=COLOR_INDEX))
+        # ── Top border ──────────────────────────────────────────────────
+        top = Text(idx_pad + "┌", style=COLOR_INDEX)
+        for c in range(cols):
+            top.append(SEP, style=COLOR_INDEX)
+            top.append("┬" if c < cols - 1 else "┐", style=COLOR_INDEX)
+        lines.append(top)
 
         for r in range(rows):
+            # ── Cell content row ────────────────────────────────────────
             row_text = Text()
-            row_text.append(f" {r:2} │ ", style=COLOR_INDEX)
-
+            row_text.append(f" {r:2}  │", style=COLOR_INDEX)
             for c in range(cols):
                 val = self._grid[r][c]
                 state = self._cell_states.get((r, c))
                 is_arrow = arrow_cell == (r, c)
-                row_text.append_text(self._render_cell(val, state, is_arrow, arrow_char))
-                row_text.append("  ")
-
+                arr = arrow_char if is_arrow else " "
+                row_text.append_text(self._render_cell(val, state, arr))
+                row_text.append("│", style=COLOR_INDEX)
             lines.append(row_text)
+
+            # ── Row separator or bottom border ──────────────────────────
+            if r < rows - 1:
+                sep = Text(idx_pad + "├", style=COLOR_INDEX)
+                for c in range(cols):
+                    sep.append(SEP, style=COLOR_INDEX)
+                    sep.append("┼" if c < cols - 1 else "┤", style=COLOR_INDEX)
+            else:
+                sep = Text(idx_pad + "└", style=COLOR_INDEX)
+                for c in range(cols):
+                    sep.append(SEP, style=COLOR_INDEX)
+                    sep.append("┴" if c < cols - 1 else "┘", style=COLOR_INDEX)
+            lines.append(sep)
 
         return Text("\n").join(lines)
 
-    def _render_cell(self, val: int, state: str | None, is_arrow: bool, arrow_char: str) -> Text:
-        suffix = f" {arrow_char}" if is_arrow else "  "
+    def _render_cell(self, val: int, state: str | None, arrow: str) -> Text:
+        # Each cell: " V A " = space, value, space, arrow, space  (5 chars)
+        content = f" {val} {arrow} "
 
         if state == "current":
-            return Text(f" {val}{suffix}", style=f"bold {COLOR_CURRENT} on {BG_CURRENT}")
+            return Text(content, style=f"bold {COLOR_CURRENT} on {BG_CURRENT}")
         elif state == "visited":
-            return Text(f" {val}{suffix}", style=f"{COLOR_VISITED} on {BG_VISITED}")
+            return Text(content, style=f"{COLOR_VISITED} on {BG_VISITED}")
         elif val == 1:
-            return Text(f" {val}{suffix}", style=f"{COLOR_LAND} on {BG_CELL}")
+            return Text(content, style=f"{COLOR_LAND} on {BG_CELL}")
         else:
-            return Text(f" {val}{suffix}", style=f"{COLOR_WATER} on {BG_CELL}")
+            return Text(content, style=f"{COLOR_WATER} on {BG_CELL}")
