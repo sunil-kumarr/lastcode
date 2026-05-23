@@ -46,9 +46,7 @@ CODE_LINES = [
     "        if r < 0 or r >= rows: return",
     "        if c < 0 or c >= cols: return",
     "        if visited[r][c] or grid[r][c] == 0: return",
-    "        _viz_visit(r, c)",
     "        visited[r][c] = True",
-    "        _viz_mark(r, c)",
     "        dfs(r+1, c)",
     "        dfs(r-1, c)",
     "        dfs(r, c+1)",
@@ -59,7 +57,6 @@ CODE_LINES = [
     "            if not visited[r][c] and grid[r][c] == 1:",
     "                dfs(r, c)",
     "                count += 1",
-    "                _viz_count(count)",
     "",
     "    return count",
 ]

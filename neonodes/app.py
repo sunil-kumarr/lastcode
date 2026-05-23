@@ -125,7 +125,8 @@ class LegendWidget(Widget):
     LegendWidget {{
         background: {SURFACE};
         padding: 1 2;
-        height: 10;
+        height: 100%;
+        width: 1fr;
         border: solid {BORDER};
     }}
     """
@@ -136,13 +137,13 @@ class LegendWidget(Widget):
         result.append("  " + "─" * 20 + "\n", style=BORDER)
 
         entries = [
-            ("current",  COLOR_CURRENT,  "■", "currently visiting"),
-            ("visited",  COLOR_VISITED,  "■", "visited / in island"),
-            ("land",     "#73DACA",      "■", "land (unvisited)"),
-            ("water",    "#3D4566",      "■", "water"),
-            ("arrow",    "#E0AF68",      "→", "direction of travel"),
+            ("#F7768E", "■", "currently visiting"),
+            ("#9ECE6A", "■", "visited / in island"),
+            ("#73DACA", "■", "land (unvisited)"),
+            ("#3D4566", "■", "water"),
+            (YELLOW,    "→", "direction of travel"),
         ]
-        for _, color, icon, label in entries:
+        for color, icon, label in entries:
             result.append(f"  {icon} ", style=f"bold {color}")
             result.append(f"{label}\n", style=TEXT)
 
@@ -339,8 +340,13 @@ class VisualizerScreen(Screen):
     }}
 
     #info-row {{
-        height: 12;
+        height: 14;
         layout: horizontal;
+    }}
+
+    #legend {{
+        width: 1fr;
+        height: 100%;
     }}
 
     #step-explanation {{
