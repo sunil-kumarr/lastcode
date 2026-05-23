@@ -29,6 +29,20 @@ CODE_LINES = [
     "    return len(stack) == 0",
 ]
 
+_LINE_MAP = {
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    6: 5,
+    7: 6,
+    9: 7,
+    10: 8,
+    12: 9,
+    13: 10,
+    15: 11
+}
+
 
 def _viz_scan(char: str, idx: int) -> None:  # noqa: ARG001
     pass

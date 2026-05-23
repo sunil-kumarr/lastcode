@@ -24,6 +24,16 @@ CODE_LINES = [
     "    return []",
 ]
 
+_LINE_MAP = {
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    6: 4,
+    8: 5,
+    9: 6
+}
+
 
 def _viz_compare(i: int, j: int, s: int) -> None:  # noqa: ARG001
     pass

@@ -269,8 +269,15 @@ class VisualizerScreen(Screen):
 
         # Update code pane
         code_pane = self.query_one("#code-pane", CodePane)
-        if frame.get("type") == "line":
-            code_pane.highlight_line(self._abs_lineno_to_display(frame["lineno"]))
+        
+        active_lineno = None
+        for i in range(step, -1, -1):
+            if "lineno" in self._frames[i]:
+                active_lineno = self._frames[i]["lineno"]
+                break
+                
+        if active_lineno is not None:
+            code_pane.highlight_line(self._abs_lineno_to_display(active_lineno))
         else:
             code_pane.highlight_line(None)
 
@@ -305,6 +312,13 @@ class VisualizerScreen(Screen):
         try:
             source_lines, start_line = inspect.getsourcelines(instrumented)
         except Exception:
+            return mapping
+
+        # If the problem file defines _LINE_MAP or LINE_MAP, use it directly (relative -> display)
+        custom_map = getattr(self._problem, "LINE_MAP", None) or getattr(self._problem, "_LINE_MAP", None)
+        if custom_map:
+            for rel_line, display_line in custom_map.items():
+                mapping[start_line + rel_line - 1] = display_line
             return mapping
 
         code_display_idx = 0

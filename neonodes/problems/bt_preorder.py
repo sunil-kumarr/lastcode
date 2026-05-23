@@ -1,30 +1,30 @@
-"""Binary Tree Inorder Traversal — full implementation."""
+"""Binary Tree Preorder Traversal — full implementation."""
 
 from __future__ import annotations
 
 import copy
 from neonodes.recorder import Recorder
 
-TITLE      = "Binary Tree Inorder Traversal"
+TITLE      = "Binary Tree Preorder Traversal"
 CATEGORY   = "tree"
 DIFFICULTY = "easy"
 RENDERER   = "tree"
 DESCRIPTION = (
-    "Given the root of a binary tree, return the inorder traversal of its node values. "
+    "Given the root of a binary tree, return the preorder traversal of its node values. "
     "Input is a level-order array with None for missing nodes."
 )
 
 DEFAULT_INPUT = [4, 2, 6, 1, 3, 5, 7]
 
 CODE_LINES = [
-    "def inorder(root):",
+    "def preorder(root):",
     "    result = []",
     "",
     "    def traverse(node):",
     "        if not node:",
     "            return",
-    "        traverse(node.left)",
     "        result.append(node.val)",
+    "        traverse(node.left)",
     "        traverse(node.right)",
     "",
     "    traverse(root)",
@@ -32,16 +32,18 @@ CODE_LINES = [
 ]
 
 _LINE_MAP = {
-    1: 1,
-    2: 2,
-    4: 4,
-    5: 5,
-    6: 6,
-    7: 7,
-    9: 8,
-    11: 9,
-    13: 11,
-    14: 12
+    98: 1,
+    99: 2,
+    101: 4,
+    102: 5,
+    103: 6,
+    104: 7,
+    105: 7,
+    106: 7,
+    107: 8,
+    108: 9,
+    110: 11,
+    111: 12
 }
 
 
@@ -93,16 +95,16 @@ def _viz_append(val: int) -> None:  # noqa: ARG001
 # ---------------------------------------------------------------------------
 
 
-def _bt_inorder_instrumented(root: "_TreeNode") -> list[int]:
+def _bt_preorder_instrumented(root: "_TreeNode") -> list[int]:
     result: list[int] = []
 
     def traverse(node: "_TreeNode | None") -> None:
         if not node:
             return
-        traverse(node.left)
         _viz_enter(node.node_id, node.val)
         result.append(node.val)
         _viz_append(node.val)
+        traverse(node.left)
         traverse(node.right)
 
     traverse(root)
@@ -134,8 +136,8 @@ def run(input_data: list) -> list[dict]:
 
     recorder = Recorder()
     frames = recorder.record(
-        "_bt_inorder_instrumented",
-        _bt_inorder_instrumented,
+        "_bt_preorder_instrumented",
+        _bt_preorder_instrumented,
         root,
         marker_fns={"_viz_enter", "_viz_append"},
         nested_fns={"traverse"},

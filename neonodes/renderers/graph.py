@@ -47,58 +47,80 @@ class GraphWidget(Widget):
         visited: set[int] = states.get("visited", set())
         queue: list[int] = states.get("queue", [])
         current: int | None = states.get("current")
+        active_edge = states.get("active_edge")
+
+        import math
+        from neonodes.renderers.canvas import TextCanvas
+
+        # Left panel: Canvas for circular graph
+        cw, ch = 40, 20
+        canvas = TextCanvas(width=cw, height=ch)
+        
+        nodes_sorted = sorted(graph.keys())
+        N = len(nodes_sorted)
+        positions = {}
+        cx, cy = 20, 10
+        R_x, R_y = 16, 7  # 2:1 ratio for terminal fonts
+        
+        for i, node in enumerate(nodes_sorted):
+            theta = 2 * math.pi * i / max(1, N) - math.pi / 2
+            nx = cx + int(R_x * math.cos(theta))
+            ny = cy + int(R_y * math.sin(theta))
+            positions[node] = (nx, ny)
+
+        # Draw edges
+        for node in nodes_sorted:
+            x0, y0 = positions[node]
+            for nb in graph[node]:
+                x1, y1 = positions[nb]
+                canvas.draw_line(x0, y0, x1, y1, char="·", style=DIM)
+
+        # Draw active edge on top
+        if active_edge:
+            u, v = active_edge
+            if u in positions and v in positions:
+                x0, y0 = positions[u]
+                x1, y1 = positions[v]
+                canvas.draw_directed_line(x0, y0, x1, y1, char="━", style=f"bold {YELLOW}", arrow_color=f"bold {YELLOW}")
+
+        # Draw nodes
+        for node in nodes_sorted:
+            x, y = positions[node]
+            node_style = self._node_style(node, visited, queue, current)
+            canvas.draw_node(x, y, str(node), style=node_style)
+
+        canvas_text = canvas.render()
+        canvas_lines = canvas_text.split("\n")
+
+        # Right panel content
+        right_lines = []
+        right_lines.append((f"  Traversal State", f"bold {DIM}"))
+        right_lines.append((f"  " + "─" * 20, DIM))
+        right_lines.append((f"  Queue:   ", DIM))
+        right_lines.append((f"  {queue if queue else '[]'}", COLOR_IN_QUEUE))
+        right_lines.append((f"  Visited: ", DIM))
+        right_lines.append((f"  {sorted(visited) if visited else '{}'}", COLOR_VISITED))
+        right_lines.append((f"  Current: ", DIM))
+        right_lines.append((f"  {current if current is not None else '—'}", COLOR_CURRENT))
+        right_lines.append((f" ", ""))
+        right_lines.append((f"  Adjacency List", f"bold {DIM}"))
+        right_lines.append((f"  " + "─" * 20, DIM))
+        for node in nodes_sorted:
+            right_lines.append((f"  {node} → {graph[node]}", DIM))
 
         result = Text()
-
-        # Two-column layout
-        col_w = 24
-
-        # Headers
-        result.append("  Adjacency List".ljust(col_w), style=f"bold {DIM}")
-        result.append("  Traversal State\n", style=f"bold {DIM}")
-        result.append("  " + "─" * (col_w - 2), style=DIM)
-        result.append("  " + "─" * 20 + "\n", style=DIM)
-
-        # Build right panel lines
-        right_lines = [
-            ("Queue:  ", str(queue) if queue else "[]", COLOR_IN_QUEUE),
-            ("Visited:", str(sorted(visited)) if visited else "{}",  COLOR_VISITED),
-            ("Current:", str(current) if current is not None else "—", COLOR_CURRENT),
-        ]
-
-        # Left panel: adjacency list rows
-        nodes_sorted = sorted(graph.keys())
-        for row_idx, node in enumerate(nodes_sorted):
-            neighbors = graph[node]
-            node_style = self._node_style(node, visited, queue, current)
-            # left column
-            result.append("  ")
-            result.append(f"{node}", style=node_style)
-            result.append(" → [", style=DIM)
-            for ni, nb in enumerate(neighbors):
-                nb_style = self._node_style(nb, visited, queue, current)
-                result.append(str(nb), style=nb_style)
-                if ni < len(neighbors) - 1:
-                    result.append(", ", style=DIM)
-            result.append("]", style=DIM)
-            # pad to col_w
-            used = 2 + 1 + 4 + len(str(neighbors))
-            pad = max(1, col_w - used)
-            result.append(" " * pad)
-
-            # right column
-            if row_idx < len(right_lines):
-                label, val, color = right_lines[row_idx]
-                result.append(f"  {label} ", style=DIM)
-                result.append(val, style=f"bold {color}")
-            result.append("\n")
-
-        # Any remaining right-panel lines
-        for row_idx in range(len(nodes_sorted), len(right_lines)):
-            result.append(" " * col_w)
-            label, val, color = right_lines[row_idx]
-            result.append(f"  {label} ", style=DIM)
-            result.append(val, style=f"bold {color}")
+        for i in range(max(ch, len(right_lines))):
+            # left side
+            if i < len(canvas_lines):
+                result.append_text(canvas_lines[i])
+            else:
+                result.append(" " * cw)
+            
+            # right side
+            if i < len(right_lines):
+                text_val, style_val = right_lines[i]
+                result.append(text_val, style=style_val)
+            
             result.append("\n")
 
         return result
@@ -130,26 +152,32 @@ class GraphRenderer:
         visited: set[int] = set()
         queue: list[int] = []
         current: int | None = None
+        active_edge: tuple | None = None
 
         for frame in frames[:up_to + 1]:
             ft = frame.get("type")
             if ft == "enqueue":
                 node = frame.get("node")
+                from_node = frame.get("from_node")
+                if from_node is not None:
+                    active_edge = (from_node, node)
                 if node not in queue:
                     queue.append(node)
             elif ft == "dequeue":
                 node = frame.get("node")
                 current = node
+                active_edge = None
                 if node in queue:
                     queue.remove(node)
             elif ft == "node_visit":
                 node = frame.get("node")
                 visited.add(node)
+                active_edge = None
 
-        return {"visited": visited, "queue": queue, "current": current}
+        return {"visited": visited, "queue": queue, "current": current, "active_edge": active_edge}
 
     def filter_frames(self, frames: list[dict]) -> list[dict]:
-        keep_types = {"node_visit", "enqueue", "dequeue"}
+        keep_types = {"node_visit", "enqueue", "dequeue", "line"}
         return [f for f in frames if f.get("type") in keep_types]
 
     def explain_frame(self, frame: dict, step: int, total: int) -> str:
@@ -161,6 +189,8 @@ class GraphRenderer:
             return f"{prefix}Dequeue node {frame.get('node')} — processing next in queue"
         if ft == "node_visit":
             return f"{prefix}Visit node {frame.get('node')} — exploring its neighbors"
+        if ft == "line":
+            return f"{prefix}Executing BFS traversal..."
         return f"{prefix}—"
 
     def apply_frame_extras(self, screen, frame: dict) -> None:
