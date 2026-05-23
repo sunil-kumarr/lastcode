@@ -114,6 +114,42 @@ class CodePane(Widget):
 
 
 # ---------------------------------------------------------------------------
+# Legend Widget
+# ---------------------------------------------------------------------------
+
+
+class LegendWidget(Widget):
+    """Color legend for grid cell states."""
+
+    DEFAULT_CSS = f"""
+    LegendWidget {{
+        background: {SURFACE};
+        padding: 1 2;
+        height: 10;
+        border: solid {BORDER};
+    }}
+    """
+
+    def render(self) -> Text:
+        result = Text()
+        result.append("  legend\n", style=f"bold {TEAL}")
+        result.append("  " + "─" * 20 + "\n", style=BORDER)
+
+        entries = [
+            ("current",  COLOR_CURRENT,  "■", "currently visiting"),
+            ("visited",  COLOR_VISITED,  "■", "visited / in island"),
+            ("land",     "#73DACA",      "■", "land (unvisited)"),
+            ("water",    "#3D4566",      "■", "water"),
+            ("arrow",    "#E0AF68",      "→", "direction of travel"),
+        ]
+        for _, color, icon, label in entries:
+            result.append(f"  {icon} ", style=f"bold {color}")
+            result.append(f"{label}\n", style=TEXT)
+
+        return result
+
+
+# ---------------------------------------------------------------------------
 # Variables Panel
 # ---------------------------------------------------------------------------
 
@@ -125,7 +161,8 @@ class VariablesPanel(Widget):
     VariablesPanel {{
         background: {SURFACE};
         padding: 1 2;
-        height: 12;
+        height: 100%;
+        width: 1fr;
         overflow-y: auto;
         border: solid {BORDER};
     }}
@@ -301,6 +338,11 @@ class VisualizerScreen(Screen):
         border: solid {BORDER};
     }}
 
+    #info-row {{
+        height: 12;
+        layout: horizontal;
+    }}
+
     #step-explanation {{
         height: 3;
         width: 100%;
@@ -388,7 +430,9 @@ class VisualizerScreen(Screen):
         self._play_speed: int = 1
         self._lineno_map: dict[int, int] = {}
 
-        self._frames = problem_module.run(self._grid)
+        self._prev_cell: tuple[int, int] | None = None
+        self._current_cell: tuple[int, int] | None = None
+        self._frames = self._filter_frames(problem_module.run(self._grid))
 
     # ------------------------------------------------------------------
     # Layout
@@ -410,7 +454,9 @@ class VisualizerScreen(Screen):
                         cell_states={},
                         id="grid-widget",
                     )
-                yield VariablesPanel(id="vars-panel")
+                with Horizontal(id="info-row"):
+                    yield VariablesPanel(id="vars-panel")
+                    yield LegendWidget(id="legend")
 
         yield Label("", id="step-explanation")
 
@@ -438,6 +484,7 @@ class VisualizerScreen(Screen):
         self.query_one("#left-panel").border_title = "code"
         self.query_one("#grid-container").border_title = "visualization"
         self.query_one("#vars-panel").border_title = "variables"
+        self.query_one("#legend").border_title = "legend"
         self.query_one("#step-explanation").border_title = "step explanation"
         self.query_one("#input-bar").border_title = "input"
         self.query_one("#bottom-bar").border_title = "playback"
@@ -457,8 +504,15 @@ class VisualizerScreen(Screen):
 
         self._cell_states = self._compute_cell_states(step)
 
+        # Track prev → current cell for arrow rendering
+        if frame.get("type") == "cell_visit":
+            self._prev_cell = self._current_cell
+            self._current_cell = (frame["r"], frame["c"])
+
         grid_w = self.query_one("#grid-widget", GridWidget)
-        grid_w.update_grid(self._grid, self._cell_states)
+        grid_w.update_grid(self._grid, self._cell_states,
+                           prev_cell=self._prev_cell,
+                           current_cell=self._current_cell)
 
         code_pane = self.query_one("#code-pane", CodePane)
         if frame.get("type") == "line":
@@ -688,9 +742,11 @@ class VisualizerScreen(Screen):
 
         error_label.update("")
         self._grid = parsed
-        self._frames = self._problem.run(self._grid)
+        self._frames = self._filter_frames(self._problem.run(self._grid))
         self._step = 0
         self._cell_states = {}
+        self._prev_cell = None
+        self._current_cell = None
         self._stop_play()
 
         self.query_one("#grid-input", Input).value = self._grid_to_str(parsed)
@@ -699,6 +755,45 @@ class VisualizerScreen(Screen):
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _filter_frames(frames: list[dict]) -> list[dict]:
+        """Keep only logically meaningful frames, drop noisy line events."""
+        keep_types = {"cell_visit", "cell_mark", "count_update"}
+        # For line frames: keep only the first entry into each (fn, r, c) combo
+        # and the outer scan loop entries (fn=_count_islands_instrumented with r,c defined)
+        result = []
+        seen_scan: set[tuple] = set()
+
+        for f in frames:
+            ft = f["type"]
+            if ft in keep_types:
+                result.append(f)
+                continue
+            if ft == "dfs_return":
+                # Only keep returns at depth 0 (island fully done)
+                if f.get("dfs_depth", 1) == 0:
+                    result.append(f)
+                continue
+            if ft == "line":
+                fn = f.get("fn", "")
+                locs = f.get("locals", {})
+                r, c = locs.get("r"), locs.get("c")
+                # Keep outer scan: first time we see each (r, c) in the main loop
+                if fn == "_count_islands_instrumented" and r is not None and c is not None:
+                    key = ("scan", r, c)
+                    if key not in seen_scan:
+                        seen_scan.add(key)
+                        result.append(f)
+                # Keep dfs entry: first line of dfs for each (r, c) at each depth
+                elif fn == "dfs" and r is not None and c is not None:
+                    depth = f.get("dfs_depth", 0)
+                    key = ("dfs", r, c, depth)
+                    if key not in seen_scan:
+                        seen_scan.add(key)
+                        result.append(f)
+
+        return result
 
     @staticmethod
     def _grid_to_str(grid: list[list[int]]) -> str:
