@@ -7,9 +7,9 @@
 ---
 
 ## ✨ Features
-<img width="2560" height="1301" alt="image" src="https://github.com/user-attachments/assets/d999f9ac-be29-445b-ab23-2b83bed95fdc" />
-<img width="1240" height="752" alt="image" src="https://github.com/user-attachments/assets/4fdf0410-5308-4935-b036-157e77861031" />
-<img width="1282" height="854" alt="image" src="https://github.com/user-attachments/assets/7ec60df0-b88c-407e-ba15-c09b7d5fcf62" />
+<img alt="lastcode tree visualizer screenshot" src="https://github.com/user-attachments/assets/d999f9ac-be29-445b-ab23-2b83bed95fdc" />
+<img alt="lastcode grid visualizer screenshot" src="https://github.com/user-attachments/assets/4fdf0410-5308-4935-b036-157e77861031" />
+<img alt="lastcode array visualizer screenshot" src="https://github.com/user-attachments/assets/7ec60df0-b88c-407e-ba15-c09b7d5fcf62" />
 
 
 * **Interactive ASCII Renderers**: Visualized trees, grids, and arrays respond dynamically as the algorithm executes.
@@ -31,22 +31,46 @@ The visualizer runs a sleek, modern Tokyonight-inspired aesthetic:
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Getting Started
 
 ### Prerequisites
 * **Python**: `>=3.11`
-* **Package Manager**: `pip` (or [uv](https://github.com/astral-sh/uv) for lightning-fast installation)
+* **Package Manager**: `brew`, `pipx`, `pip`, or `uv`
 
-### Installation
+### Option 1: macOS Homebrew (Recommended)
+The cleanest way to install on macOS without interacting with system Python environments or virtual environments.
+
+```bash
+# 1. Tap the repository
+brew tap sunil-kumarr/tap
+
+# 2. Install the application cleanly
+brew install lastcode-tui
+```
+
+### Option 2: via PyPI (`pipx` or `pip`)
+Because modern operating systems enforce environment protections (PEP 668), installing standalone global terminal applications via standard `pip install` will often fail. Use `pipx` to run the tool in an isolated sandbox.
+
+```bash
+# Recommended for global installation:
+pipx install lastcode-tui
+
+# Alternatively, run instantly using uv without permanent installation:
+uvx lastcode-tui
+```
+
+### Option 3: Local Development (Source Build)
+If you are planning to contribute or modify the visualizer core:
+
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/lastcode.git
+   git clone https://github.com/sunil-kumarr/lastcode.git
    cd lastcode
    ```
 
 2. Create and activate a virtual environment:
    ```bash
-   python -m venv .venv
+   python3 -m venv .venv
    source .venv/bin/activate
    ```
 
@@ -60,17 +84,18 @@ The visualizer runs a sleek, modern Tokyonight-inspired aesthetic:
 ## 🕹️ Usage
 
 ### Run the Visualizer
-Start the application from anywhere using the installed shortcut:
+Once installed via any option above, start the interactive engine from anywhere in your terminal:
 ```bash
 lastcode
 ```
-Or run the module directly:
+
+For a local source checkout, you can also run the module directly:
 ```bash
 python -m lastcode
 ```
 
 ### Hot-Reloading for Development
-If you are modifying code, stylesheets, or adding new problems, run the watcher script. It will instantly reload the application in the terminal when changes are saved:
+If you are modifying code, stylesheets, or adding new problems, run the watcher script inside your source directory. It will instantly reload the application in the terminal when changes are saved:
 ```bash
 python dev.py
 ```
