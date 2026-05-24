@@ -1,5 +1,5 @@
 """
-home.py — Home screen for neonodes: topic/difficulty filters + problem list.
+home.py — Home screen for neonodes: topic/difficulty filters, search, and problem list.
 """
 
 from __future__ import annotations
@@ -12,22 +12,13 @@ from textual.widget import Widget
 from rich.text import Text
 
 from neonodes.problems.registry import TOPICS, DIFFICULTIES, PROBLEMS
-from neonodes.theme import (
-    BG, SURFACE, BORDER, TEXT, DIM, BLUE, GREEN, YELLOW, RED, TEAL, SEL_BG, DIFF_COLORS
-)
-
-
-# ---------------------------------------------------------------------------
-# HomeWidget
-# ---------------------------------------------------------------------------
+from neonodes.theme import THEMES
 
 
 class HomeWidget(Widget):
     """Full-screen home widget with topic/difficulty filters and problem list."""
 
     can_focus = True
-
-    VISIBLE_ROWS = 8  # max rows before scrolling
 
     class ProblemSelected(Message):
         """Emitted when the user presses Enter on an available problem."""
@@ -36,121 +27,223 @@ class HomeWidget(Widget):
             super().__init__()
             self.problem_id = problem_id
 
-    DEFAULT_CSS = f"""
-    HomeWidget {{
-        background: {BG};
+    DEFAULT_CSS = """
+    HomeWidget {
         width: 100%;
         height: 100%;
         padding: 0;
-    }}
+    }
     """
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._search_query: str = ""
+        self._mode: str = "NORMAL"  # "NORMAL" or "SEARCH"
         self._topic: str = "all"
         self._difficulty: str = "all"
+        self._sort_key: str = "Name"  # Default sorting: "Name". Options: "Name", "Topic", "Difficulty"
+        self._theme_name: str = "Midnight"  # Start with Midnight to match screenshot
         self._selected: int = 0
         self._scroll_offset: int = 0
 
+    @property
+    def theme(self) -> dict:
+        return THEMES.get(self._theme_name, THEMES["Midnight"])
+
+    def apply_theme(self) -> None:
+        t = self.theme
+        self.styles.background = t["bg"]
+        self.styles.color = t["text"]
+        if self.screen:
+            self.screen.styles.background = t["bg"]
+
     def on_mount(self) -> None:
         self.focus()
+        self.apply_theme()
 
-    def _filtered(self) -> list[dict]:
+    def _filtered_and_sorted(self) -> list[dict]:
+        # 1. Filter
         result = []
         for p in PROBLEMS:
+            # Search filter
+            if self._search_query:
+                if self._search_query.lower() not in p["title"].lower():
+                    continue
+            # Topic filter
             if self._topic != "all" and p["topic"] != self._topic:
                 continue
+            # Difficulty filter
             if self._difficulty != "all" and p["difficulty"] != self._difficulty:
                 continue
             result.append(p)
+
+        # 2. Sort
+        if self._sort_key == "Name":
+            result.sort(key=lambda x: x["title"].lower())
+        elif self._sort_key == "Topic":
+            result.sort(key=lambda x: x["topic"].lower())
+        elif self._sort_key == "Difficulty":
+            diff_order = {"easy": 0, "medium": 1, "hard": 2}
+            result.sort(key=lambda x: diff_order.get(x["difficulty"], 3))
+
         return result
 
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
 
+    def render_top_boxes(self, width: int, theme: dict) -> Text:
+        t_border = theme["border"]
+        t_text = theme["text"]
+        t_blue = theme["blue"]
+        t_green = theme["green"]
+        t_yellow = theme["yellow"]
+
+        # Select boxes based on terminal width to prevent wrap-around
+        if width >= 77:
+            display_boxes = [
+                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
+                ("sort", "Sort [s]", 13, lambda: self._sort_key + " ⬆", t_blue),
+                ("theme", "Theme [c]", 11, lambda: self._theme_name, t_blue),
+            ]
+        elif width >= 63:
+            display_boxes = [
+                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
+                ("sort", "Sort [s]", 13, lambda: self._sort_key + " ⬆", t_blue),
+            ]
+        elif width >= 47:
+            display_boxes = [
+                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
+            ]
+        else:
+            display_boxes = [
+                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+            ]
+
+        fixed_w = sum(box[2] for box in display_boxes)
+        num_boxes = len(display_boxes)
+        # Solve for search_inner_w so that the total line width matches 'width'
+        search_inner_w = max(10, width - fixed_w - 3 * num_boxes - 4)
+
+        top_line = Text()
+        search_lbl = " Search "
+        search_border_r = search_inner_w + 2 - len(search_lbl)
+        top_line.append("┌", style=t_border)
+        top_line.append("─", style=t_border)
+        top_line.append(search_lbl, style=f"bold {t_text}")
+        top_line.append("─" * max(0, search_border_r - 1), style=t_border)
+
+        for name, label, inner_w, val_func, color in display_boxes:
+            top_line.append("┬", style=t_border)
+            top_line.append("─", style=t_border)
+            top_line.append(label, style=f"bold {t_text}")
+            extra_dashes = max(0, inner_w - len(label))
+            top_line.append("─" * extra_dashes, style=t_border)
+            top_line.append("─", style=t_border)
+
+        top_line.append("┐\n", style=t_border)
+
+        mid_line = Text()
+        mid_line.append("│", style=t_border)
+        search_val = self._search_query
+        if self._mode == "SEARCH":
+            search_val += "█"
+        search_disp = f" {search_val}"
+        search_disp = search_disp[:search_inner_w+2].ljust(search_inner_w+2)
+        mid_line.append(search_disp, style=t_text)
+
+        for name, label, inner_w, val_func, color in display_boxes:
+            mid_line.append("│", style=t_border)
+            val = val_func()
+            val_disp = f" {val}"
+            val_disp = val_disp[:inner_w+2].ljust(inner_w+2)
+            mid_line.append(val_disp, style=f"bold {color}")
+
+        mid_line.append("│\n", style=t_border)
+
+        bot_line = Text()
+        bot_line.append("└", style=t_border)
+        bot_line.append("─" * (search_inner_w + 2), style=t_border)
+        for name, label, inner_w, val_func, color in display_boxes:
+            bot_line.append("┴", style=t_border)
+            bot_line.append("─" * (inner_w + 2), style=t_border)
+        bot_line.append("┘\n", style=t_border)
+
+        result = Text()
+        result.append(top_line)
+        result.append(mid_line)
+        result.append(bot_line)
+        return result
+
     def render(self) -> Text:
         result = Text()
         width = self.size.width or 80
+        height = self.size.height or 24
+        t = self.theme
 
-        # Column widths
-        TW = 38   # title col inner width
-        CW = 10   # topic col inner width
-        DW = 10   # difficulty col inner width
-        # total table width = 1 + TW + 1 + 1 + CW + 1 + 1 + DW + 1 = TW+CW+DW+7
-        table_w = TW + CW + DW + 7
+        t_text = t["text"]
+        t_dim = t["dim"]
+        t_blue = t["blue"]
+        t_green = t["green"]
+        t_yellow = t["yellow"]
+        t_red = t["red"]
+        t_teal = t["teal"]
+        t_sel_bg = t["sel_bg"]
 
-        # indent to center the table
-        pad = max(0, (width - table_w) // 2)
-        P = " " * pad
+        # Apply themes to screen in case size or screen state changed
+        self.apply_theme()
 
-        # ── Header ──────────────────────────────────────────────────────
-        result.append("\n\n")
-        result.append("neonodes".center(width) + "\n", style=f"bold {BLUE}")
-        result.append("algorithm visualizer".center(width) + "\n", style=DIM)
+        # 1. Top Search/Filter Boxes
+        result.append(self.render_top_boxes(width, t))
         result.append("\n")
 
-        # ── Filters as dropdowns ────────────────────────────────────────
-        topic_val = f" {self._topic} ▾ "
-        diff_val  = f" {self._difficulty} ▾ "
+        # 2. Table Column Definition
+        columns = [
+            ("#", 4, lambda p, i: f"{i:2d} ", lambda p: t_dim),
+            ("Name", 42, lambda p, i: p["title"], lambda p: t_text if p["available"] else t_dim),
+            ("Topic", 12, lambda p, i: p["topic"], lambda p: t_teal),
+            ("Difficulty", 12, lambda p, i: p["difficulty"], lambda p: t_red if p["difficulty"] == "hard" else (t_yellow if p["difficulty"] == "medium" else t_green)),
+            ("Status", 14, lambda p, i: " • Available" if p["available"] else " • Coming Soon", lambda p: t_green if p["available"] else t_dim),
+        ]
 
-        result.append(P + "  topic  ", style=DIM)
-        result.append(f"┌{'─' * (len(topic_val))}┐", style=BORDER)
-        result.append("      difficulty  ", style=DIM)
-        result.append(f"┌{'─' * (len(diff_val))}┐", style=BORDER)
-        result.append("\n")
+        # Calculate dynamic Name column width
+        other_w = sum(w for col, w, _, _ in columns if col != "Name")
+        name_w = max(20, width - other_w - 4)
 
-        result.append(P + "         ", style=DIM)
-        result.append("│", style=BORDER)
-        result.append(topic_val, style=f"bold {BLUE} on {SEL_BG}")
-        result.append("│", style=BORDER)
-        result.append("                  ", style=DIM)
-        result.append("│", style=BORDER)
-        diff_color = DIFF_COLORS.get(self._difficulty, BLUE)
-        result.append(diff_val, style=f"bold {diff_color} on {SEL_BG}")
-        result.append("│", style=BORDER)
-        result.append("\n")
+        # 3. Render Table Title
+        filtered = self._filtered_and_sorted()
+        result.append(f"Problems ({len(filtered)}/{len(PROBLEMS)})\n", style=f"bold {t_text}")
 
-        result.append(P + "         ", style=DIM)
-        result.append(f"└{'─' * (len(topic_val))}┘", style=BORDER)
-        result.append("                  ", style=DIM)
-        result.append(f"└{'─' * (len(diff_val))}┘", style=BORDER)
-        result.append("\n\n")
+        # 4. Render Table Header Row
+        header_line = Text()
+        header_line.append("  ")
+        for col, w, _, _ in columns:
+            col_name = col
+            if col == "Name" and self._sort_key == "Name":
+                col_name += "▲"
+            elif col == "Topic" and self._sort_key == "Topic":
+                col_name += "▲"
+            elif col == "Difficulty" and self._sort_key == "Difficulty":
+                col_name += "▲"
 
-        # ── Table ───────────────────────────────────────────────────────
-        def row_sep(left: str, mid1: str, mid2: str, right: str) -> None:
-            result.append(P + left + "─" * (TW + 2) + mid1 +
-                          "─" * (CW + 2) + mid2 +
-                          "─" * (DW + 2) + right + "\n", style=BORDER)
+            disp_w = name_w if col == "Name" else w
+            header_line.append(col_name.ljust(disp_w), style=f"bold {t_text}")
+        header_line.append("\n")
+        result.append(header_line)
 
-        def cell(text: str, w: int, style: str) -> None:
-            result.append(" " + text[:w].ljust(w) + " ", style=style)
-
-        # Top border
-        row_sep("┌", "┬", "┬", "┐")
-
-        # Header row
-        result.append(P + "│", style=BORDER)
-        cell("problem", TW, f"bold {DIM}")
-        result.append("│", style=BORDER)
-        cell("topic", CW, f"bold {DIM}")
-        result.append("│", style=BORDER)
-        cell("difficulty", DW, f"bold {DIM}")
-        result.append("│\n", style=BORDER)
-
-        # Header separator
-        row_sep("├", "┼", "┼", "┤")
-
-        # Problem rows
-        filtered = self._filtered()
+        # 5. Render Problem Rows
         if not filtered:
-            result.append(P + "│", style=BORDER)
-            msg = " no problems match filters"
-            result.append((" " + msg).ljust(TW + CW + DW + 6), style=DIM)
-            result.append("│\n", style=BORDER)
+            result.append("\n  no problems match filters / search query\n", style=t_dim)
         else:
+            # Handle scroll offsets
             sel = max(0, min(self._selected, len(filtered) - 1))
-            visible_rows = self.VISIBLE_ROWS
+            # Dynamic height allocation
+            # Top boxes (3) + Spacer (1) + Table Title (1) + Table Header (1) + Details (2) + Status (1) + Margin (4) = 13 lines reserved
+            visible_rows = max(5, height - 13)
+
             scroll = self._scroll_offset
             if sel < scroll:
                 scroll = sel
@@ -162,57 +255,73 @@ class HomeWidget(Widget):
 
             for idx_rel, problem in enumerate(visible):
                 idx_abs = idx_rel + scroll
-                is_sel  = (idx_abs == sel)
-                avail   = problem.get("available", False)
-                bg      = SEL_BG if is_sel else ""
+                is_sel = (idx_abs == sel)
+                bg = t_sel_bg if is_sel else ""
 
-                diff       = problem["difficulty"]
-                diff_color = DIFF_COLORS.get(diff, TEXT)
-
-                # title cell
+                row_text = Text()
                 if is_sel:
-                    prefix = "▶ "
-                    t_style = f"bold {TEXT}"
+                    row_text.append("▶ ")
                 else:
-                    prefix = "  "
-                    t_style = TEXT if avail else DIM
+                    row_text.append("  ")
 
-                title_raw = prefix + problem["title"]
-                if not avail:
-                    title_raw += "  · · ·"
+                for col, w, val_func, color_func in columns:
+                    val = val_func(problem, idx_abs + 1)
+                    disp_w = name_w if col == "Name" else w
+                    val_str = val[:disp_w].ljust(disp_w)
 
-                result.append(P + "│", style=BORDER)
-                val = title_raw[:TW].ljust(TW)
-                s = f"{t_style} on {bg}" if bg else t_style
-                result.append(" " + val + " ", style=s)
+                    if is_sel:
+                        c = "bold #FFFFFF"
+                    else:
+                        c = color_func(problem)
 
-                result.append("│", style=BORDER)
-                topic_s = f"{TEAL} on {bg}" if bg else TEAL
-                cell(problem["topic"], CW, topic_s)
+                    row_text.append(val_str, style=c)
 
-                result.append("│", style=BORDER)
-                diff_s = f"{diff_color} on {bg}" if bg else diff_color
-                cell(diff, DW, diff_s)
+                if is_sel:
+                    row_text.stylize(f"on {bg}")
 
-                result.append("│\n", style=BORDER)
+                row_text.append("\n")
+                result.append(row_text)
 
-                # row separator between rows (not after last)
-                if idx_rel < len(visible) - 1:
-                    row_sep("├", "┼", "┼", "┤")
+        # Fill in remaining empty space to keep details aligned at bottom if small dataset
+        actual_rows = len(filtered[scroll: scroll + visible_rows]) if filtered else 0
+        fill_lines = max(0, visible_rows - actual_rows)
+        result.append("\n" * fill_lines)
 
-        # Bottom border
-        row_sep("└", "┴", "┴", "┘")
+        # 6. Selected Problem Details Bar
+        result.append("\n")
+        if filtered:
+            sel_problem = filtered[max(0, min(self._selected, len(filtered) - 1))]
+            title = sel_problem["title"]
+            diff = sel_problem["difficulty"].upper()
+            topic = sel_problem["topic"].upper()
+            
+            result.append("▶ ", style=f"bold {t_blue}")
+            result.append(f"{title}  ", style=f"bold {t_text}")
+            diff_color = t_green if diff == "EASY" else (t_yellow if diff == "MEDIUM" else t_red)
+            result.append(f"{diff}  ", style=diff_color)
+            result.append(f"{topic}", style=f"bold {t_teal}")
         result.append("\n")
 
-        # ── Key hints ───────────────────────────────────────────────────
-        hints = [("[↑↓]","navigate"), ("[t]","topic"), ("[d]","difficulty"),
-                 ("[enter]","launch"), ("[q]","quit")]
-        result.append(P)
-        for key, label in hints:
-            result.append(key, style=f"bold {BLUE}")
-            result.append(f" {label}   ", style=DIM)
-        result.append("\n")
+        # 7. Bottom Status Bar
+        status = Text()
+        if self._mode == "SEARCH":
+            status.append("Type to search...   ", style=t_dim)
+            status.append("Esc", style=f"bold {t_yellow}")
+            status.append(" or ", style=t_dim)
+            status.append("Enter", style=f"bold {t_yellow}")
+            status.append(" to return to navigation", style=t_dim)
+        else:
+            hints = [
+                ("Enter", "detail"), ("/", "search"), ("t", "topic"), ("d", "difficulty"),
+                ("s", "sort"), ("c", "theme"), ("r", "reset"), ("q", "quit")
+            ]
+            for idx, (key, label) in enumerate(hints):
+                if idx > 0:
+                    status.append("   ")
+                status.append(key, style=f"bold {t_blue}")
+                status.append(f":{label}", style=t_dim)
 
+        result.append(status)
         return result
 
     # ------------------------------------------------------------------
@@ -220,9 +329,35 @@ class HomeWidget(Widget):
     # ------------------------------------------------------------------
 
     def on_key(self, event) -> None:
-        filtered = self._filtered()
+        filtered = self._filtered_and_sorted()
         total = len(filtered)
 
+        if self._mode == "SEARCH":
+            # Prevent default bubbling (like screen shortcuts) when typing
+            event.prevent_default()
+            event.stop()
+
+            if event.key == "backspace":
+                self._search_query = self._search_query[:-1]
+                self._selected = 0
+                self._scroll_offset = 0
+                self.refresh()
+            elif event.key in ("escape", "enter"):
+                self._mode = "NORMAL"
+                self.refresh()
+            elif event.key == "space":
+                self._search_query += " "
+                self._selected = 0
+                self._scroll_offset = 0
+                self.refresh()
+            elif len(event.key) == 1 and event.key.isprintable():
+                self._search_query += event.key
+                self._selected = 0
+                self._scroll_offset = 0
+                self.refresh()
+            return
+
+        # NORMAL MODE
         if event.key == "up":
             if total > 0:
                 self._selected = max(0, self._selected - 1)
@@ -233,16 +368,42 @@ class HomeWidget(Widget):
                 self._selected = min(total - 1, self._selected + 1)
             self.refresh()
 
-        elif event.key == "t":
+        elif event.key == "slash":  # enter search mode
+            self._mode = "SEARCH"
+            self.refresh()
+
+        elif event.key == "t":  # cycle Topic
             cur_idx = TOPICS.index(self._topic)
             self._topic = TOPICS[(cur_idx + 1) % len(TOPICS)]
             self._selected = 0
             self._scroll_offset = 0
             self.refresh()
 
-        elif event.key == "d":
+        elif event.key == "d":  # cycle Difficulty
             cur_idx = DIFFICULTIES.index(self._difficulty)
             self._difficulty = DIFFICULTIES[(cur_idx + 1) % len(DIFFICULTIES)]
+            self._selected = 0
+            self._scroll_offset = 0
+            self.refresh()
+
+        elif event.key == "s":  # cycle Sort
+            SORT_KEYS = ["Name", "Topic", "Difficulty"]
+            cur_idx = SORT_KEYS.index(self._sort_key)
+            self._sort_key = SORT_KEYS[(cur_idx + 1) % len(SORT_KEYS)]
+            self.refresh()
+
+        elif event.key == "c":  # cycle Theme (Color Scheme)
+            names = list(THEMES.keys())
+            cur_idx = names.index(self._theme_name)
+            self._theme_name = names[(cur_idx + 1) % len(names)]
+            self.apply_theme()
+            self.refresh()
+
+        elif event.key == "r":  # Reset filters
+            self._search_query = ""
+            self._topic = "all"
+            self._difficulty = "all"
+            self._sort_key = "Name"
             self._selected = 0
             self._scroll_offset = 0
             self.refresh()
@@ -254,8 +415,7 @@ class HomeWidget(Widget):
                 if problem.get("available", False):
                     self.post_message(HomeWidget.ProblemSelected(problem["id"]))
                 else:
-                    # Coming soon — stay, just refresh (no navigation)
-                    self.refresh()
+                    self.notify(f"'{problem['title']}' is coming soon!")
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +426,7 @@ class HomeWidget(Widget):
 class HomeScreen(Screen):
     """Home screen with problem browser."""
 
-    CSS = f"Screen {{ background: {BG}; }}"
+    CSS = "Screen { background: transparent; }"
 
     BINDINGS = [
         Binding("q", "quit", "Quit", show=True),

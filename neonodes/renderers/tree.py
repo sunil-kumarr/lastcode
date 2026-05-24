@@ -261,6 +261,7 @@ class TreeRenderer:
         for frame in frames[:up_to + 1]:
             ft = frame.get("type")
             depth = frame.get("dfs_depth", frame.get("depth", 0))
+            depth = max(1, depth)
             active_stack = active_stack[:depth]
 
             if ft in ("line", "dfs_return"):
@@ -361,6 +362,7 @@ class TreeRenderer:
         for frame in candidate_frames:
             ft = frame.get("type")
             depth = frame.get("dfs_depth", frame.get("depth", 0))
+            depth = max(1, depth)
             active_stack = active_stack[:depth]
 
             if ft in ("line", "dfs_return"):
