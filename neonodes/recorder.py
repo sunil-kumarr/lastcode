@@ -49,6 +49,26 @@ class Recorder:
         self._target_fn_names = frozenset({fn_name}) | self._nested_fns
         self._marker_handlers = marker_handlers or self._default_handlers()
 
+        # Prepend initial signature frame representing the function call (line 1)
+        import inspect
+        try:
+            sig = inspect.signature(func)
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            initial_locals = dict(bound.arguments)
+            _, start_line = inspect.getsourcelines(func)
+            if start_line is not None:
+                self.frames.append({
+                    "type": "line",
+                    "lineno": start_line,
+                    "filename": func.__code__.co_filename,
+                    "fn": func.__name__,
+                    "locals": self._safe_deepcopy(initial_locals),
+                    "dfs_depth": 0,
+                })
+        except Exception:
+            pass
+
         old_trace = sys.gettrace()
         sys.settrace(self._global_trace)
         try:
@@ -102,6 +122,10 @@ class Recorder:
                     locs = dict(frame.f_locals)
                     result = handler(locs, self._dfs_depth)
                     if result:
+                        if frame.f_back:
+                            result["lineno"] = frame.f_back.f_lineno
+                            result["filename"] = frame.f_back.f_code.co_filename
+                            result["locals"] = self._safe_deepcopy(dict(frame.f_back.f_locals))
                         self.frames.append(result)
                 return None
 
@@ -148,6 +172,7 @@ class Recorder:
         self.frames.append({
             "type": "line",
             "lineno": frame.f_lineno,
+            "filename": frame.f_code.co_filename,
             "fn": frame.f_code.co_name,
             "locals": locals_snap,
             "dfs_depth": self._dfs_depth,
