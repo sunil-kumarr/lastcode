@@ -76,6 +76,7 @@ class HomeWidget(Widget):
     def _filtered_and_sorted(self) -> list[dict]:
         # 1. Filter
         result = []
+        seen_titles: set[str] = set()
         for p in PROBLEMS:
             # Search filter
             if self._search_query:
@@ -87,6 +88,14 @@ class HomeWidget(Widget):
             # Difficulty filter
             if self._difficulty != "all" and p["difficulty"] != self._difficulty:
                 continue
+
+            # Avoid duplicate aliases in the combined "all" view.
+            if self._topic == "all":
+                title_key = p["title"].strip().lower()
+                if title_key in seen_titles:
+                    continue
+                seen_titles.add(title_key)
+
             result.append(p)
 
         # 2. Sort

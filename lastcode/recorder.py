@@ -6,7 +6,14 @@ import copy
 import sys
 from typing import Callable
 
-_DEFAULT_MARKER_FNS: frozenset[str] = frozenset({"_viz_visit", "_viz_mark", "_viz_count"})
+_DEFAULT_MARKER_FNS: frozenset[str] = frozenset({
+    "_viz_probe",
+    "_viz_visit",
+    "_viz_mark",
+    "_viz_water",
+    "_viz_count",
+    "_viz_complete",
+})
 
 
 class Recorder:
@@ -90,10 +97,22 @@ class Recorder:
                 return {"type": "cell_visit", "r": r, "c": c, "color": "current", "dfs_depth": depth}
             return None
 
+        def handle_viz_probe(locs: dict, depth: int) -> dict | None:
+            r, c = locs.get("r"), locs.get("c")
+            if r is not None and c is not None:
+                return {"type": "cell_probe", "r": r, "c": c, "dfs_depth": depth}
+            return None
+
         def handle_viz_mark(locs: dict, depth: int) -> dict | None:
             r, c = locs.get("r"), locs.get("c")
             if r is not None and c is not None:
                 return {"type": "cell_mark", "r": r, "c": c, "color": "visited", "dfs_depth": depth}
+            return None
+
+        def handle_viz_water(locs: dict, depth: int) -> dict | None:
+            r, c = locs.get("r"), locs.get("c")
+            if r is not None and c is not None:
+                return {"type": "cell_water", "r": r, "c": c, "dfs_depth": depth}
             return None
 
         def handle_viz_count(locs: dict, depth: int) -> dict | None:
@@ -102,10 +121,16 @@ class Recorder:
                 return {"type": "count_update", "count": count, "dfs_depth": depth}
             return None
 
+        def handle_viz_complete(locs: dict, depth: int) -> dict | None:
+            return {"type": "traversal_complete", "dfs_depth": depth}
+
         return {
+            "_viz_probe": handle_viz_probe,
             "_viz_visit": handle_viz_visit,
             "_viz_mark":  handle_viz_mark,
+            "_viz_water": handle_viz_water,
             "_viz_count": handle_viz_count,
+            "_viz_complete": handle_viz_complete,
         }
 
     # ------------------------------------------------------------------

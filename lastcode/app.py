@@ -11,10 +11,10 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.timer import Timer
-from textual.widgets import Footer, Input, Label, TabbedContent, TabPane, Static
+from textual.widgets import Footer, Input, Label, Static
 
 from lastcode.theme import BG, SURFACE, BORDER, TEXT, DIM, BLUE, YELLOW, RED, SEL_BG
-from lastcode.widgets import CodePane, ScrubberBar, VariablesPanel, LegendWidget
+from lastcode.widgets import CodePane, ScrubberBar, VariablesPanel, LegendWidget, CallStackPanel
 from lastcode.renderers.grid import GridWidget
 
 
@@ -52,6 +52,10 @@ class VisualizerScreen(Screen):
         Binding("left",   "prev_frame",    "◀ Prev",      show=True),
         Binding("right",  "next_frame",    "Next ▶",      show=True),
         Binding("space",  "toggle_play",   "Play/Pause",  show=True),
+        Binding("minus",  "zoom_out",      "Zoom Out",    show=True),
+        Binding("+", "zoom_in",      "Zoom In", show=True),
+        Binding("equal",  "zoom_in",       "Zoom In",     show=False),
+        Binding("0",      "zoom_reset",    "Reset Zoom",  show=True),
         Binding("tab",    "toggle_tab",    "Toggle View", show=True),
         Binding("i",      "focus_input",   "Edit Input",  show=True),
         Binding("q",      "quit",          "Quit",        show=True),
@@ -76,50 +80,26 @@ class VisualizerScreen(Screen):
         border: solid {BORDER};
     }}
 
-    TabbedContent {{
-        height: 1fr;
-    }}
-
-    ContentSwitcher {{
-        height: 100%;
-    }}
-
-    TabPane {{
-        padding: 0;
-        height: 100%;
+    #problem-panel {{
+        height: 16;
         background: {SURFACE};
+        border: solid {BORDER};
+        layout: vertical;
+    }}
+
+    #solution-panel {{
+        height: 1fr;
+        background: {SURFACE};
+        border: solid {BORDER};
+        layout: vertical;
     }}
 
     #problem-desc {{
         padding: 1 2;
         overflow-y: auto;
-        height: 100%;
+        height: 1fr;
         color: {TEXT};
         background: {SURFACE};
-    }}
-
-    ContentTabs {{
-        display: none;
-    }}
-
-    ContentTab {{
-        color: {DIM};
-        text-style: bold;
-        padding: 0 2;
-    }}
-
-    ContentTab:hover {{
-        color: {TEXT};
-    }}
-
-    ContentTab.-active {{
-        color: {BLUE};
-        text-style: bold;
-    }}
-
-    Underline > .underline--bar {{
-        color: {BLUE};
-        background: {BLUE};
     }}
 
     #right-panel {{
@@ -137,11 +117,22 @@ class VisualizerScreen(Screen):
     }}
 
     #info-row {{
-        height: 14;
+        height: 20;
         layout: horizontal;
     }}
 
+    #zoom-controls {{
+        height: 1;
+        color: {DIM};
+        padding: 0 2;
+    }}
+
     #legend {{
+        width: 1fr;
+        height: 100%;
+    }}
+
+    #call-stack-panel {{
         width: 1fr;
         height: 100%;
     }}
@@ -207,6 +198,7 @@ class VisualizerScreen(Screen):
         text-style: bold;
         padding: 0 2;
         width: 100%;
+        height: 3;
         border-bottom: solid {BORDER};
     }}
 
@@ -237,6 +229,7 @@ class VisualizerScreen(Screen):
         self._play_timer: Timer | None = None
         self._frame_states: dict = {}
         self._play_speed: int = 1
+        self._zoom: float = 1.0
         self._lineno_map: dict[int, int] = {}
         self._input_focused: bool = False
 
@@ -249,25 +242,28 @@ class VisualizerScreen(Screen):
 
     def compose(self) -> ComposeResult:
         viz_widget = self._renderer.make_widget(self._input_data)
+        is_tree = getattr(self._problem, "RENDERER", "") == "tree"
 
         with Container(id="main-container"):
             with Vertical(id="left-panel"):
-                yield Label(
-                    f"  {self._problem.TITLE}  [{self._problem.DIFFICULTY.upper()}]",
-                    id="problem-title",
-                )
-                with TabbedContent(id="code-tabs"):
-                    with TabPane("Solution", id="solution-tab"):
-                        yield CodePane(self._problem.CODE_LINES, id="code-pane")
-                    with TabPane("Problem", id="problem-tab"):
-                        yield Static(self._problem.DESCRIPTION, id="problem-desc")
+                with Container(id="problem-panel"):
+                    yield Label(
+                        f"  {self._problem.TITLE}  [{self._problem.DIFFICULTY.upper()}]",
+                        id="problem-title",
+                    )
+                    yield Static(self._problem.DESCRIPTION, id="problem-desc")
+                with Container(id="solution-panel"):
+                    yield CodePane(self._problem.CODE_LINES, id="code-pane")
 
             with Vertical(id="right-panel"):
                 with Container(id="grid-container"):
                     yield viz_widget
                 yield Label("", id="step-explanation")
+                yield Label("zoom: [-] 100% [+]   [0] reset", id="zoom-controls")
                 with Horizontal(id="info-row"):
                     yield VariablesPanel(id="vars-panel")
+                    if is_tree:
+                        yield CallStackPanel(id="call-stack-panel")
                     yield LegendWidget(
                         entries=self._renderer.legend_entries(),
                         id="legend",
@@ -292,30 +288,20 @@ class VisualizerScreen(Screen):
         self._lineno_map = self._build_lineno_map()
         self._apply_frame(0)
 
-        # Disable focus on hidden tab bar widgets to prevent them from capturing left/right arrow keys
-        tabs = self.query_one("#code-tabs", TabbedContent)
-        for child in tabs.walk_children():
-            if child.__class__.__name__ in ("ContentTabs", "Tabs", "ContentTab", "Tab"):
-                child.can_focus = False
-
         self.query_one("#grid-input", Input).blur()
         self.set_focus(None)
 
-        self.query_one("#left-panel").border_title = "solution"
+        self.query_one("#left-panel").border_title = "problem + solution"
+        self.query_one("#problem-panel").border_title = "problem statement"
+        self.query_one("#solution-panel").border_title = "solution"
         self.query_one("#grid-container").border_title = "visualization"
         self.query_one("#vars-panel").border_title = "variables"
+        if getattr(self._problem, "RENDERER", "") == "tree":
+            self.query_one("#call-stack-panel").border_title = "call stack"
         self.query_one("#legend").border_title = "legend"
         self.query_one("#step-explanation").border_title = "step explanation"
         self.query_one("#input-bar").border_title = "input"
         self.query_one("#bottom-bar").border_title = "playback"
-
-    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
-        if event.tabbed_content.id == "code-tabs":
-            active_id = event.pane.id
-            if active_id == "solution-tab":
-                self.query_one("#left-panel").border_title = "solution"
-            elif active_id == "problem-tab":
-                self.query_one("#left-panel").border_title = "problem"
 
     # ------------------------------------------------------------------
     # Frame navigation
@@ -331,6 +317,8 @@ class VisualizerScreen(Screen):
 
         # Let renderer compute visual state
         self._frame_states = self._renderer.compute_states(self._frames, step)
+        if getattr(self._problem, "RENDERER", "") == "tree":
+            self._frame_states["zoom"] = self._zoom
 
         # Update visualization widget
         viz = self.query_one("#grid-container").children[0]
@@ -339,14 +327,17 @@ class VisualizerScreen(Screen):
         # Update code pane
         code_pane = self.query_one("#code-pane", CodePane)
         
-        active_lineno = None
+        active_display_line = None
         for i in range(step, -1, -1):
-            if "lineno" in self._frames[i]:
-                active_lineno = self._frames[i]["lineno"]
+            if "display_line" in self._frames[i]:
+                active_display_line = self._frames[i]["display_line"]
                 break
-                
-        if active_lineno is not None:
-            code_pane.highlight_line(self._abs_lineno_to_display(active_lineno))
+            if "lineno" in self._frames[i]:
+                active_display_line = self._abs_lineno_to_display(self._frames[i]["lineno"])
+                break
+
+        if active_display_line is not None:
+            code_pane.highlight_line(active_display_line)
         else:
             code_pane.highlight_line(None)
 
@@ -354,9 +345,19 @@ class VisualizerScreen(Screen):
         vars_panel = self.query_one("#vars-panel", VariablesPanel)
         vars_panel.update_entries(self._renderer.variable_entries(frame))
 
+        if getattr(self._problem, "RENDERER", "") == "tree":
+            stack_panel = self.query_one("#call-stack-panel", CallStackPanel)
+            stack_panel.update_entries(
+                self._frame_states.get("call_stack_entries", []),
+                self._frame_states.get("edge_note", ""),
+            )
+
         # Update step explanation
         self.query_one("#step-explanation", Label).update(
             self._renderer.explain_frame(frame, step, len(self._frames))
+        )
+        self.query_one("#zoom-controls", Label).update(
+            f"zoom: [-] {int(self._zoom * 100)}% [+]   [0] reset"
         )
 
         # Update scrubber
@@ -394,7 +395,12 @@ class VisualizerScreen(Screen):
         for src_offset, src_line in enumerate(source_lines):
             abs_lineno = start_line + src_offset
             stripped_src = src_line.strip()
-            if not stripped_src or stripped_src.startswith('"""'):
+            if (
+                not stripped_src
+                or stripped_src.startswith('"""')
+                or stripped_src.startswith("#")
+                or "_viz_" in stripped_src
+            ):
                 continue
             while code_display_idx < len(self._problem.CODE_LINES):
                 if self._problem.CODE_LINES[code_display_idx].strip():
@@ -430,14 +436,27 @@ class VisualizerScreen(Screen):
             self._start_play()
 
     def action_toggle_tab(self) -> None:
-        try:
-            tabs = self.query_one("#code-tabs", TabbedContent)
-        except Exception:
+        return
+
+    def _set_zoom(self, value: float) -> None:
+        self._zoom = max(0.6, min(1.8, round(value, 2)))
+        if self._frames and self.query("#grid-container"):
+            self._apply_frame(self._step)
+
+    def action_zoom_in(self) -> None:
+        if getattr(self._problem, "RENDERER", "") != "tree":
             return
-        if tabs.active == "solution-tab":
-            tabs.active = "problem-tab"
-        else:
-            tabs.active = "solution-tab"
+        self._set_zoom(self._zoom + 0.2)
+
+    def action_zoom_out(self) -> None:
+        if getattr(self._problem, "RENDERER", "") != "tree":
+            return
+        self._set_zoom(self._zoom - 0.2)
+
+    def action_zoom_reset(self) -> None:
+        if getattr(self._problem, "RENDERER", "") != "tree":
+            return
+        self._set_zoom(1.0)
 
     def action_focus_input(self) -> None:
         self.query_one("#grid-input", Input).focus()
