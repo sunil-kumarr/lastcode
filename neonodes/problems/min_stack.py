@@ -29,7 +29,7 @@ def _min_stack_instrumented(operations):
     stack = []
     min_stack = []
     results = []
-    for op in operations:
+    for i, op in enumerate(operations):
         if isinstance(op, tuple):
             action, val = op
         else:

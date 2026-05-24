@@ -4,7 +4,7 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import daily_temperatures, eval_rpn
+from neonodes.problems import daily_temperatures, eval_rpn, asteroid_collision, next_greater_element, simplify_path
 from neonodes.renderers.stack import StackRenderer
 
 def test_daily_temperatures_flow():
@@ -65,3 +65,50 @@ def test_eval_rpn_flow():
     
     state = renderer.compute_states(filtered, push_step_idx)
     assert len(state.get("stack", [])) > 0, "Stack should not be empty after a push"
+    assert "i" in state.get("pointers", {}), "'i' pointer should be tracked for eval_rpn"
+
+def test_asteroid_collision_flow():
+    print("Testing Asteroid Collision stack renderer flow...")
+    input_data = [5, 10, -5]
+    
+    frames = asteroid_collision.run(list(input_data))
+    renderer = StackRenderer()
+    filtered = renderer.filter_frames(frames)
+    
+    assert len(filtered) > 0, "Should have filtered frames"
+    
+    # Verify sequence detection and pointer tracking
+    state = renderer.compute_states(filtered, len(filtered) - 1)
+    assert state.get("sequence") == input_data, "Should detect asteroids as sequence"
+    assert "i" in state.get("pointers", {}), "'i' pointer should be tracked for asteroid_collision"
+
+def test_next_greater_element_flow():
+    print("Testing Next Greater Element I stack renderer flow...")
+    input_data = ([4, 1, 2], [1, 3, 4, 2])
+    
+    frames = next_greater_element.run(input_data)
+    renderer = StackRenderer()
+    filtered = renderer.filter_frames(frames)
+    
+    assert len(filtered) > 0, "Should have filtered frames"
+    
+    # Verify sequence detection (nums2 is traversed) and pointer tracking
+    state = renderer.compute_states(filtered, len(filtered) - 1)
+    assert state.get("sequence") == input_data[1], "Should detect nums2 as sequence"
+    assert "i" in state.get("pointers", {}), "'i' pointer should be tracked for next_greater_element"
+
+def test_simplify_path_flow():
+    print("Testing Simplify Path stack renderer flow...")
+    input_data = "/home//foo/"
+    
+    frames = simplify_path.run(input_data)
+    renderer = StackRenderer()
+    filtered = renderer.filter_frames(frames)
+    
+    assert len(filtered) > 0, "Should have filtered frames"
+    
+    # Verify sequence detection (split parts) and pointer tracking
+    state = renderer.compute_states(filtered, len(filtered) - 1)
+    assert state.get("sequence") == ["", "home", "", "foo", ""], "Should detect parts as sequence"
+    assert "i" in state.get("pointers", {}), "'i' pointer should be tracked for simplify_path"
+

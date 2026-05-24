@@ -28,7 +28,7 @@ def _viz_link(*args, **kwargs): pass
 def _online_stock_span_instrumented(prices):
     stack = []
     res = []
-    for price in prices:
+    for i, price in enumerate(prices):
         span = 1
         while stack and stack[-1][0] <= price:
             popped = stack.pop()

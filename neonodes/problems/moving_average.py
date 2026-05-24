@@ -29,7 +29,7 @@ def _moving_average_instrumented(val_list, size):
     queue = []
     curr_sum = 0
     res = []
-    for val in val_list:
+    for i, val in enumerate(val_list):
         if len(queue) == size:
             popped = queue.pop(0)
             _viz_dequeue(popped)

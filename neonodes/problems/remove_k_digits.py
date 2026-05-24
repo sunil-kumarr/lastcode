@@ -27,7 +27,7 @@ def _viz_link(*args, **kwargs): pass
 
 def _remove_k_digits_instrumented(num, k):
     stack = []
-    for digit in num:
+    for i, digit in enumerate(num):
         while k > 0 and stack and stack[-1] > digit:
             popped = stack.pop()
             _viz_pop(popped)

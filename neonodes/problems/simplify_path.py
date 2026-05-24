@@ -27,7 +27,8 @@ def _viz_link(*args, **kwargs): pass
 
 def _simplify_path_instrumented(path):
     stack = []
-    for part in path.split("/"):
+    parts = path.split("/")
+    for i, part in enumerate(parts):
         if part == "..":
             if stack:
                 popped = stack.pop()

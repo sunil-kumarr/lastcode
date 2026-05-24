@@ -29,7 +29,7 @@ def _circular_queue_instrumented(size, ops):
     queue = [None] * size
     head = -1; tail = -1
     res = []
-    for op in ops:
+    for i, op in enumerate(ops):
         if isinstance(op, tuple):
             action, val = op
         else:

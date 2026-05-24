@@ -97,6 +97,11 @@ class StackWidget(Widget):
         else:
             sequence, extra = data, None
 
+        if states.get("sequence") is not None:
+            sequence = states["sequence"]
+        if isinstance(sequence, str):
+            sequence = list(sequence)
+
         stack_list = states.get("stack", [])
         operation = states.get("operation", "")
         op_type = states.get("op_type", "")
@@ -104,7 +109,9 @@ class StackWidget(Widget):
         curr_idx = states.get("curr_idx")
 
         result = Text()
-        CELL_W = 6
+        # Determine dynamic cell width for sequence visualization
+        max_val_len = max((len(str(val)) for val in sequence), default=4) if sequence else 4
+        SEQ_CELL_W = max(6, max_val_len + 2)
 
         # ── Extra parameter display ────────────────────────────────────
         if extra is not None:
@@ -137,9 +144,9 @@ class StackWidget(Widget):
                     ptrs = top_pointers_by_cell[idx]
                     if d < len(ptrs):
                         name = ptrs[d]
-                        result.append(f"{name:^{CELL_W}} ", style=f"bold {get_pointer_color(name)}")
+                        result.append(f"{name:^{SEQ_CELL_W}} ", style=f"bold {get_pointer_color(name)}")
                     else:
-                        result.append(" " * (CELL_W + 1))
+                        result.append(" " * (SEQ_CELL_W + 1))
                 result.append("\n")
 
             # Render Top Pointer Arrow Row (down arrows: ↓)
@@ -149,28 +156,28 @@ class StackWidget(Widget):
                     ptrs = top_pointers_by_cell[idx]
                     if ptrs:
                         arrow_color = YELLOW if len(ptrs) > 1 else get_pointer_color(ptrs[0])
-                        result.append(f"{'↓':^{CELL_W}} ", style=f"bold {arrow_color}")
+                        result.append(f"{'↓':^{SEQ_CELL_W}} ", style=f"bold {arrow_color}")
                     else:
-                        result.append(" " * (CELL_W + 1))
+                        result.append(" " * (SEQ_CELL_W + 1))
                 result.append("\n")
 
             # Index header
             result.append("   ", style=DIM)
             for idx in range(len(sequence)):
-                result.append(f"{idx:^{CELL_W}} ", style=DIM)
+                result.append(f"{idx:^{SEQ_CELL_W}} ", style=DIM)
             result.append("\n")
 
             # Top border
             result.append("  ┌", style=DIM)
             for idx in range(len(sequence)):
-                result.append("─" * CELL_W, style=DIM)
+                result.append("─" * SEQ_CELL_W, style=DIM)
                 result.append("┬" if idx < len(sequence) - 1 else "┐", style=DIM)
             result.append("\n")
 
             # Values row
             result.append("  │", style=DIM)
             for idx, val in enumerate(sequence):
-                label = f" {str(val):^4} "
+                label = f" {str(val):^{SEQ_CELL_W - 2}} "
                 text_col, bg_col = get_cell_style(idx, pointers)
                 result.append(label, style=f"bold {text_col} on {bg_col}" if text_col != TEXT else f"{text_col} on {bg_col}")
                 result.append("│", style=DIM)
@@ -179,7 +186,7 @@ class StackWidget(Widget):
             # Bottom border
             result.append("  └", style=DIM)
             for idx in range(len(sequence)):
-                result.append("─" * CELL_W, style=DIM)
+                result.append("─" * SEQ_CELL_W, style=DIM)
                 result.append("┴" if idx < len(sequence) - 1 else "┘", style=DIM)
             result.append("\n")
 
@@ -193,9 +200,9 @@ class StackWidget(Widget):
                     ptrs = bottom_pointers_by_cell[idx]
                     if ptrs:
                         arrow_color = YELLOW if len(ptrs) > 1 else get_pointer_color(ptrs[0])
-                        result.append(f"{'↑':^{CELL_W}} ", style=f"bold {arrow_color}")
+                        result.append(f"{'↑':^{SEQ_CELL_W}} ", style=f"bold {arrow_color}")
                     else:
-                        result.append(" " * (CELL_W + 1))
+                        result.append(" " * (SEQ_CELL_W + 1))
                 result.append("\n")
 
             # Render Bottom Pointer Name Rows
@@ -205,9 +212,9 @@ class StackWidget(Widget):
                     ptrs = bottom_pointers_by_cell[idx]
                     if d < len(ptrs):
                         name = ptrs[d]
-                        result.append(f"{name:^{CELL_W}} ", style=f"bold {get_pointer_color(name)}")
+                        result.append(f"{name:^{SEQ_CELL_W}} ", style=f"bold {get_pointer_color(name)}")
                     else:
-                        result.append(" " * (CELL_W + 1))
+                        result.append(" " * (SEQ_CELL_W + 1))
                 result.append("\n")
 
         # ── Operation indicator ────────────────────────────────────────
@@ -324,6 +331,7 @@ class StackRenderer:
         curr_idx = None
         res_val = None
         pointers = {}
+        sequence = None
 
         # 1. Collect ALL variable names across all frames
         all_var_names: set[str] = set()
@@ -349,6 +357,13 @@ class StackRenderer:
                 if key in locals_val and isinstance(locals_val[key], int):
                     curr_idx = locals_val[key]
                     break
+
+            # Extract active sequence being traversed
+            for key in ("parts", "nums2", "temperatures", "asteroids", "tokens", "operations", "prices", "path", "s", "num"):
+                if key in locals_val:
+                    if isinstance(locals_val[key], (list, tuple, str)):
+                        sequence = locals_val[key]
+                        break
 
             # Accumulate pointer positions
             for name in POINTER_NAMES:
@@ -403,6 +418,7 @@ class StackRenderer:
             "curr_idx": curr_idx,
             "res_val": res_val,
             "pointers": pointers,
+            "sequence": sequence,
             "accumulated_locals": accumulated_vars,
         }
 

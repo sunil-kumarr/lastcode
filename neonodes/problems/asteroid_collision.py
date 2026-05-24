@@ -27,7 +27,7 @@ def _viz_link(*args, **kwargs): pass
 
 def _asteroid_collision_instrumented(asteroids):
     stack = []
-    for ast in asteroids:
+    for i, ast in enumerate(asteroids):
         while stack and ast < 0 < stack[-1]:
             if stack[-1] < -ast:
                 popped = stack.pop()

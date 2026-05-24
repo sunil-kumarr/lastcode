@@ -63,13 +63,17 @@ class ArrayWidget(Widget):
         state = states.get("state", "check")
 
         result = Text()
-        CELL_W = 6
+
+        # Dynamic cell width based on longest value
+        max_val_len = max((len(str(v)) for v in nums), default=1) if nums else 1
+        CELL_W = max(6, max_val_len + 2)
+        inner_w = CELL_W - 2
         SEP = "─" * CELL_W
 
         # Index header
         result.append("  ", style=DIM)
         for idx in range(len(nums)):
-            result.append(f"  {idx:<4}", style=DIM)
+            result.append(f"{idx:^{CELL_W}} ", style=DIM)
         result.append("\n")
 
         # Top border
@@ -82,7 +86,10 @@ class ArrayWidget(Widget):
         # Values row
         result.append("  │", style=DIM)
         for idx, val in enumerate(nums):
-            label = f" {val:^4} "
+            val_str = str(val)
+            if len(val_str) > inner_w:
+                val_str = val_str[:inner_w - 1] + "…"
+            label = f" {val_str:^{inner_w}} "
             if state == "found" and idx in (i_idx, j_idx):
                 result.append(label, style=f"bold {COLOR_FOUND} on {BG_FOUND}")
             elif idx == i_idx or idx == j_idx:
@@ -103,13 +110,13 @@ class ArrayWidget(Widget):
         result.append("  ", style=DIM)
         for idx in range(len(nums)):
             if idx == i_idx and idx == j_idx:
-                result.append(f" {'↑ij':^4} ", style=f"bold {COLOR_COMPARE}")
+                result.append(f"{'↑ij':^{CELL_W}} ", style=f"bold {COLOR_COMPARE}")
             elif idx == i_idx:
-                result.append(f" {'↑i':^4} ", style=f"bold {COLOR_COMPARE}")
+                result.append(f"{'↑i':^{CELL_W}} ", style=f"bold {COLOR_COMPARE}")
             elif idx == j_idx:
-                result.append(f" {'↑j':^4} ", style=f"bold {COLOR_COMPARE}")
+                result.append(f"{'↑j':^{CELL_W}} ", style=f"bold {COLOR_COMPARE}")
             else:
-                result.append(" " * CELL_W, style=DIM)
+                result.append(" " * (CELL_W + 1), style=DIM)
         result.append("\n")
 
         # Target + sum

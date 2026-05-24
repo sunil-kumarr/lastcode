@@ -30,7 +30,7 @@ def _basic_calculator_instrumented(s):
     operand = 0
     res = 0
     sign = 1
-    for ch in s:
+    for i, ch in enumerate(s):
         if ch.isdigit():
             operand = operand * 10 + int(ch)
         elif ch == '+':

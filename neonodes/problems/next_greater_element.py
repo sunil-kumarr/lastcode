@@ -28,7 +28,7 @@ def _viz_link(*args, **kwargs): pass
 def _next_greater_element_instrumented(nums1, nums2):
     mapping = {}
     stack = []
-    for num in nums2:
+    for i, num in enumerate(nums2):
         while stack and stack[-1] < num:
             popped = stack.pop()
             _viz_pop(popped)

@@ -28,7 +28,7 @@ def _viz_link(*args, **kwargs): pass
 def _recent_calls_instrumented(t_list):
     queue = []
     res = []
-    for t in t_list:
+    for i, t in enumerate(t_list):
         queue.append(t)
         _viz_enqueue(t)
         while queue and queue[0] < t - 3000:

@@ -27,7 +27,7 @@ def _viz_link(*args, **kwargs): pass
 
 def _eval_rpn_instrumented(tokens):
     stack = []
-    for token in tokens:
+    for i, token in enumerate(tokens):
         if token in ("+", "-", "*", "/"):
             b = stack.pop()
             _viz_pop(b)
