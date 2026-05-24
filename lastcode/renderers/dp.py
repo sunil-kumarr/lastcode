@@ -1,24 +1,28 @@
 """
-dp.py — 2D DP Table renderer for LCS.
+dp.py — Generic DP table/array renderer for dynamic programming problems.
 """
 
 from __future__ import annotations
 
 import ast
+from typing import Any
+
 from rich.text import Text
-from textual.widget import Widget
 from textual.app import RenderResult
+from textual.widget import Widget
 
-from lastcode.theme import SURFACE, TEXT, DIM, BLUE, GREEN, YELLOW, TEAL, RED, BG
+from lastcode.theme import SURFACE, TEXT, DIM, BLUE, GREEN, YELLOW, TEAL
 
-COLOR_CURRENT  = "#F7768E"  # coral
-COLOR_VISITED  = "#9ECE6A"  # green
-COLOR_COMPARE  = "#7AA2F7"  # blue
-BG_CURRENT     = "#321820"
-BG_VISITED     = "#253320"
-BG_COMPARE     = "#1E2A3D"
-BG_CELL        = "#2D3250"
-COLOR_INDEX    = "#3D4566"
+COLOR_CURRENT = "#F7768E"
+COLOR_COMPARE = "#7AA2F7"
+COLOR_SOLVED = "#9ECE6A"
+COLOR_TRACE = "#E0AF68"
+BG_CURRENT = "#321820"
+BG_COMPARE = "#1E2A3D"
+BG_SOLVED = "#253320"
+BG_TRACE = "#2D2010"
+BG_CELL = "#2D3250"
+COLOR_INDEX = "#3D4566"
 
 
 class DPWidget(Widget):
@@ -31,246 +35,254 @@ class DPWidget(Widget):
     }}
     """
 
-    def __init__(self, input_data: tuple[str, str], **kwargs) -> None:
+    def __init__(self, input_data: Any, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._s1, self._s2 = input_data
-        self._dp = [[0] * (len(self._s1) + 1) for _ in range(len(self._s2) + 1)]
-        self._states: dict = {}
+        self._states: dict[str, Any] = {}
+        self._input_data = input_data
 
-    def update_dp(self, input_data: tuple[str, str], states: dict) -> None:
-        self._s1, self._s2 = input_data
+    def update_dp(self, input_data: Any, states: dict[str, Any]) -> None:
+        self._input_data = input_data
         self._states = states
-        self._dp = states.get("dp", [[0] * (len(self._s1) + 1) for _ in range(len(self._s2) + 1)])
         self.refresh()
 
     def render(self) -> RenderResult:
-        s1, s2 = self._s1, self._s2
-        dp = self._dp
-        states = self._states
-        
-        r_curr = states.get("r")
-        c_curr = states.get("c")
-        cell_status = states.get("cell_status", "")
-        backtrack_path = states.get("backtrack_path", [])
-        lcs_str = states.get("lcs_str", "")
+        table = self._states.get("table")
+        if table is None:
+            return Text("  (no DP state yet)", style=DIM)
 
-        rows = len(s2) + 1
-        cols = len(s1) + 1
+        matrix = self._normalize_table(table)
+        row_labels = self._normalize_labels(
+            self._states.get("row_labels"),
+            len(matrix),
+            default_prefix="r",
+            row_mode=True,
+        )
+        col_labels = self._normalize_labels(
+            self._states.get("col_labels"),
+            len(matrix[0]) if matrix else 0,
+            default_prefix="c",
+            row_mode=False,
+        )
 
-        CELL_W = 5
-        SEP = "─" * CELL_W
-        idx_pad = "     "
+        active_cells = set(tuple(cell) for cell in self._states.get("active_cells", []))
+        compare_cells = set(tuple(cell) for cell in self._states.get("compare_cells", []))
+        solved_cells = set(tuple(cell) for cell in self._states.get("solved_cells", []))
+        trace_cells = set(tuple(cell) for cell in self._states.get("trace_cells", []))
+
+        max_val_width = max(len(str(v)) for row in matrix for v in row) if matrix else 1
+        max_col_width = max((len(label) for label in col_labels), default=1)
+        cell_w = max(5, max_val_width + 2, max_col_width + 2)
+        sep = "─" * cell_w
+        row_label_w = max(4, max((len(label) for label in row_labels), default=1) + 1)
+        idx_pad = " " * row_label_w
 
         lines: list[Text] = []
 
-        # ── Column headers (s1 characters) ──────────────────────────────
         header = Text(idx_pad + " ", style=COLOR_INDEX)
-        header.append("  Ø  ", style=COLOR_INDEX)
-        for c in range(1, cols):
-            header.append(" ", style=COLOR_INDEX)
-            header.append(f"  {s1[c-1]}  ", style=COLOR_INDEX)
+        for idx, label in enumerate(col_labels):
+            header.append(f"{label:^{cell_w}}", style=f"bold {YELLOW}" if self._column_has_active(idx, active_cells) else COLOR_INDEX)
+            if idx < len(col_labels) - 1:
+                header.append(" ", style=COLOR_INDEX)
         lines.append(header)
 
-        # ── Top border ──────────────────────────────────────────────────
         top = Text(idx_pad + "┌", style=COLOR_INDEX)
-        for c in range(cols):
-            top.append(SEP, style=COLOR_INDEX)
-            top.append("┬" if c < cols - 1 else "┐", style=COLOR_INDEX)
+        for c in range(len(col_labels)):
+            top.append(sep, style=COLOR_INDEX)
+            top.append("┬" if c < len(col_labels) - 1 else "┐", style=COLOR_INDEX)
         lines.append(top)
 
-        for r in range(rows):
-            # ── Cell content row ────────────────────────────────────────
+        for r, row in enumerate(matrix):
             row_text = Text()
-            row_label = "Ø" if r == 0 else s2[r-1]
-            row_text.append(f" {row_label:2}  │", style=COLOR_INDEX)
-            for c in range(cols):
-                val = dp[r][c]
-                
-                # Determine cell state
-                state = "default"
-                if (r, c) == (r_curr, c_curr):
-                    state = cell_status or "current"
-                elif (r, c) in backtrack_path:
-                    state = "backtrack"
-                elif r_curr is not None and c_curr is not None:
-                    # Highlight comparison cells when computing (r_curr, c_curr)
-                    if cell_status == "compare" and ((r, c) == (r_curr - 1, c) or (r, c) == (r, c - 1)):
-                        state = "compare"
-                    elif cell_status == "match" and (r, c) == (r - 1, c - 1):
-                        state = "compare"
-
-                row_text.append_text(self._render_cell(val, state))
+            row_style = f"bold {YELLOW}" if self._row_has_active(r, active_cells) else COLOR_INDEX
+            row_text.append(f"{row_labels[r]:>{row_label_w}}│", style=row_style)
+            for c, val in enumerate(row):
+                state = self._cell_state((r, c), active_cells, compare_cells, solved_cells, trace_cells)
+                row_text.append_text(self._render_cell(val, cell_w, state))
                 row_text.append("│", style=COLOR_INDEX)
             lines.append(row_text)
 
-            # ── Row separator or bottom border ──────────────────────────
-            if r < rows - 1:
-                sep = Text(idx_pad + "├", style=COLOR_INDEX)
-                for c in range(cols):
-                    sep.append(SEP, style=COLOR_INDEX)
-                    sep.append("┼" if c < cols - 1 else "┤", style=COLOR_INDEX)
+            if r < len(matrix) - 1:
+                border = Text(idx_pad + "├", style=COLOR_INDEX)
+                for c in range(len(col_labels)):
+                    border.append(sep, style=COLOR_INDEX)
+                    border.append("┼" if c < len(col_labels) - 1 else "┤", style=COLOR_INDEX)
             else:
-                sep = Text(idx_pad + "└", style=COLOR_INDEX)
-                for c in range(cols):
-                    sep.append(SEP, style=COLOR_INDEX)
-                    sep.append("┴" if c < cols - 1 else "┘", style=COLOR_INDEX)
-            lines.append(sep)
+                border = Text(idx_pad + "└", style=COLOR_INDEX)
+                for c in range(len(col_labels)):
+                    border.append(sep, style=COLOR_INDEX)
+                    border.append("┴" if c < len(col_labels) - 1 else "┘", style=COLOR_INDEX)
+            lines.append(border)
 
-        result = Text("\n").join(lines)
-        
-        # Backtrack list
-        if backtrack_path:
-            result.append(f"\n\n  LCS Backtrack Path: ", style=DIM)
-            # Reversing path for visual flow starting from (0,0) or (m,n)
-            path_str = " → ".join(f"({r},{c})" for r, c in backtrack_path)
-            result.append(path_str, style=YELLOW)
-            if lcs_str:
-                result.append(f"\n  LCS String:         ", style=DIM)
-                result.append(f"\"{lcs_str}\"", style=f"bold {COLOR_VISITED}")
-                
-        return result
+        context_lines = self._states.get("context_lines", [])
+        if context_lines:
+            lines.append(Text(""))
+            lines.append(Text("  dp context", style=f"bold {TEAL}"))
+            lines.append(Text("  " + "─" * 28, style=COLOR_INDEX))
+            for line in context_lines:
+                style = f"bold {BLUE}" if line.startswith("Step") else TEXT
+                lines.append(Text(f"  {line}", style=style))
 
-    def _render_cell(self, val: int, state: str) -> Text:
-        content = f"  {val}  "
+        return Text("\n").join(lines)
+
+    @staticmethod
+    def _normalize_table(table: Any) -> list[list[Any]]:
+        if isinstance(table, list) and table and isinstance(table[0], list):
+            return table
+        if isinstance(table, list):
+            return [table]
+        return [[table]]
+
+    @staticmethod
+    def _normalize_labels(labels: list[str] | None, size: int, default_prefix: str, row_mode: bool) -> list[str]:
+        if labels is not None and len(labels) == size:
+            return [str(label) for label in labels]
+        if row_mode and size == 1:
+            return ["dp "]
+        return [f"{default_prefix}{idx}" for idx in range(size)]
+
+    @staticmethod
+    def _column_has_active(col: int, active_cells: set[tuple[int, int]]) -> bool:
+        return any(c == col for _, c in active_cells)
+
+    @staticmethod
+    def _row_has_active(row: int, active_cells: set[tuple[int, int]]) -> bool:
+        return any(r == row for r, _ in active_cells)
+
+    @staticmethod
+    def _cell_state(
+        cell: tuple[int, int],
+        active_cells: set[tuple[int, int]],
+        compare_cells: set[tuple[int, int]],
+        solved_cells: set[tuple[int, int]],
+        trace_cells: set[tuple[int, int]],
+    ) -> str:
+        if cell in active_cells:
+            return "current"
+        if cell in trace_cells:
+            return "trace"
+        if cell in compare_cells:
+            return "compare"
+        if cell in solved_cells:
+            return "solved"
+        return "default"
+
+    @staticmethod
+    def _render_cell(val: Any, cell_w: int, state: str) -> Text:
+        content = f"{str(val):^{cell_w}}"
         if state == "current":
             return Text(content, style=f"bold {COLOR_CURRENT} on {BG_CURRENT}")
-        elif state == "match":
-            return Text(content, style=f"bold {COLOR_VISITED} on {BG_VISITED}")
-        elif state == "compare":
+        if state == "compare":
             return Text(content, style=f"bold {COLOR_COMPARE} on {BG_COMPARE}")
-        elif state == "backtrack":
-            return Text(content, style=f"bold {YELLOW} on #2D2010")
-        else:
-            return Text(content, style=f"{TEXT} on {BG_CELL}")
-
-
-# ---------------------------------------------------------------------------
-# DPRenderer
-# ---------------------------------------------------------------------------
+        if state == "solved":
+            return Text(content, style=f"bold {COLOR_SOLVED} on {BG_SOLVED}")
+        if state == "trace":
+            return Text(content, style=f"bold {COLOR_TRACE} on {BG_TRACE}")
+        return Text(content, style=f"{TEXT} on {BG_CELL}")
 
 
 class DPRenderer:
-
-    def make_widget(self, input_data: tuple[str, str]) -> DPWidget:
+    def make_widget(self, input_data: Any) -> DPWidget:
         return DPWidget(input_data=input_data, id="dp-widget")
 
-    def update_widget(self, widget: DPWidget, input_data: tuple[str, str], frame_states: dict) -> None:
+    def update_widget(self, widget: DPWidget, input_data: Any, frame_states: dict[str, Any]) -> None:
         widget.update_dp(input_data, frame_states)
 
-    def compute_states(self, frames: list[dict], up_to: int) -> dict:
-        dp = []
-        r = None
-        c = None
-        cell_status = ""
-        backtrack_path = []
-        lcs_str = ""
-
-        for frame in frames[:up_to + 1]:
-            ft = frame.get("type")
-            if ft == "dp_update":
-                dp = frame.get("dp", [])
-                r = frame.get("r")
-                c = frame.get("c")
-                cell_status = ""
-            elif ft == "cell_start":
-                r = frame.get("r")
-                c = frame.get("c")
-                cell_status = "current"
-            elif ft == "cell_match":
-                r = frame.get("r")
-                c = frame.get("c")
-                cell_status = "match"
-            elif ft == "cell_compare":
-                r = frame.get("r")
-                c = frame.get("c")
-                cell_status = "compare"
-            elif ft == "backtrack":
-                r = frame.get("r")
-                c = frame.get("c")
-                backtrack_path = list(frame.get("path", []))
-                cell_status = "backtrack"
-            elif ft == "lcs_done":
-                lcs_str = frame.get("lcs_str", "")
-                backtrack_path = list(frame.get("path", []))
-                r = None
-                c = None
-                cell_status = ""
-
-        return {
-            "dp": dp,
-            "r": r,
-            "c": c,
-            "cell_status": cell_status,
-            "backtrack_path": backtrack_path,
-            "lcs_str": lcs_str,
+    def compute_states(self, frames: list[dict], up_to: int) -> dict[str, Any]:
+        state: dict[str, Any] = {
+            "table": None,
+            "row_labels": None,
+            "col_labels": None,
+            "active_cells": [],
+            "compare_cells": [],
+            "solved_cells": set(),
+            "trace_cells": [],
+            "context_lines": [],
+            "result_label": "result",
+            "result_value": "—",
         }
 
+        for frame in frames[:up_to + 1]:
+            state["table"] = frame.get("table", state["table"])
+            state["row_labels"] = frame.get("row_labels", state["row_labels"])
+            state["col_labels"] = frame.get("col_labels", state["col_labels"])
+            state["active_cells"] = frame.get("active_cells", state["active_cells"])
+            state["compare_cells"] = frame.get("compare_cells", state["compare_cells"])
+            state["trace_cells"] = frame.get("trace_cells", state["trace_cells"])
+            state["context_lines"] = self._context_lines(frame)
+            state["result_label"] = frame.get("result_label", state["result_label"])
+            state["result_value"] = frame.get("result_value", state["result_value"])
+
+            for cell in frame.get("solved_cells", []):
+                state["solved_cells"].add(tuple(cell))
+
+        state["solved_cells"] = sorted(state["solved_cells"])
+        return state
+
     def filter_frames(self, frames: list[dict]) -> list[dict]:
-        keep_types = {"dp_update", "cell_start", "cell_match", "cell_compare", "backtrack", "lcs_done", "line"}
-        return [f for f in frames if f.get("type") in keep_types]
+        return [f for f in frames if f.get("type") != "line"]
 
     def explain_frame(self, frame: dict, step: int, total: int) -> str:
-        ft = frame.get("type")
-        prefix = f"  [{step + 1}/{total}]  "
-        if ft == "dp_update":
-            r = frame.get("r")
-            c = frame.get("c")
-            if r is not None and c is not None:
-                return f"{prefix}Updated cell ({r},{c}) in DP table"
-            return f"{prefix}Initialized DP table with zeros"
-        if ft == "cell_start":
-            return f"{prefix}Computing cell ({frame.get('r')},{frame.get('c')})"
-        if ft == "cell_match":
-            return f"{prefix}Characters match! Value is 1 + diagonal: dp[{frame.get('r')}][{frame.get('c')}] = {frame.get('val')}"
-        if ft == "cell_compare":
-            return f"{prefix}No match. Value is max of top and left: dp[{frame.get('r')}][{frame.get('c')}] = {frame.get('val')}"
-        if ft == "backtrack":
-            return f"{prefix}Backtracking step at cell ({frame.get('r')},{frame.get('c')})"
-        if ft == "lcs_done":
-            return f"{prefix}Reconstructed LCS string: \"{frame.get('lcs_str')}\""
-        if ft == "line":
-            return f"{prefix}Running LCS algorithm..."
-        return f"{prefix}—"
+        note = frame.get("note", "Advance DP state")
+        return f"  [{step + 1}/{total}]  {note}"
 
     def apply_frame_extras(self, screen, frame: dict) -> None:
         pass
 
     def legend_entries(self) -> list[tuple[str, str, str]]:
         return [
-            (COLOR_CURRENT, "■", "current cell"),
-            (COLOR_COMPARE, "■", "parent cell(s) compared"),
-            (COLOR_VISITED, "■", "matching character cell"),
-            (YELLOW,        "■", "backtrack path cell"),
+            (COLOR_CURRENT, "■", "current DP state"),
+            (COLOR_COMPARE, "■", "states compared"),
+            (COLOR_SOLVED, "■", "computed state"),
+            (COLOR_TRACE, "■", "trace/backtrack path"),
         ]
 
     def variable_entries(self, frame: dict) -> list[tuple[str, str, str]]:
+        entries: list[tuple[str, str, str]] = []
         locs = frame.get("locals", {})
-        r = locs.get("r", "—")
-        c = locs.get("c", "—")
-        s1 = locs.get("s1", "—")
-        s2 = locs.get("s2", "—")
-        lcs_val = locs.get("lcs_str", "—")
-        
-        return [
-            ("s1 (cols)",  str(s1),     TEAL),
-            ("s2 (rows)",  str(s2),     TEAL),
-            ("r (row)",    str(r),      BLUE),
-            ("c (col)",    str(c),      BLUE),
-            ("LCS output", str(lcs_val), f"bold {COLOR_VISITED}"),
-        ]
 
-    def parse_input(self, raw: str) -> tuple[str, str]:
-        try:
-            parsed = ast.literal_eval(f"({raw})")
-            if isinstance(parsed, tuple) and len(parsed) == 2 and isinstance(parsed[0], str) and isinstance(parsed[1], str):
-                s1, s2 = parsed
-                if len(s1) > 10 or len(s2) > 10:
-                    raise ValueError("Max string length is 10 to fit screen")
-                return s1, s2
-        except Exception:
-            pass
-        raise ValueError('Expected two comma-separated strings of max length 10, e.g. "abcde", "ace"')
+        if "i" in locs:
+            entries.append(("i", str(locs["i"]), BLUE))
+        if "j" in locs:
+            entries.append(("j", str(locs["j"]), BLUE))
+        if "r" in locs:
+            entries.append(("r", str(locs["r"]), BLUE))
+        if "c" in locs:
+            entries.append(("c", str(locs["c"]), BLUE))
 
-    def serialize_input(self, input_data: tuple[str, str]) -> str:
-        s1, s2 = input_data
-        return f'"{s1}", "{s2}"'
+        result_label = frame.get("result_label", "result")
+        result_value = frame.get("result_value", "—")
+        entries.append((result_label, str(result_value), f"bold {GREEN}"))
+
+        for key in ("n", "m", "amount", "target", "s", "t", "word1", "word2", "s1", "s2", "s3"):
+            if key in locs:
+                entries.append((key, str(locs[key]), TEAL))
+
+        if not entries:
+            entries.append(("state", "ready", DIM))
+        return entries
+
+    def parse_input(self, raw: str) -> Any:
+        return ast.literal_eval(raw.strip())
+
+    def serialize_input(self, input_data: Any) -> str:
+        return repr(input_data)
+
+    @staticmethod
+    def _context_lines(frame: dict) -> list[str]:
+        note = frame.get("note", "Advance DP state")
+        result_label = frame.get("result_label", "result")
+        result_value = frame.get("result_value", "—")
+        cells = frame.get("active_cells", [])
+        compare = frame.get("compare_cells", [])
+
+        lines = [f"Step: {note}"]
+        if cells:
+            lines.append(f"Focus: {', '.join(str(tuple(cell)) for cell in cells)}")
+        else:
+            lines.append("Focus: waiting for next DP state")
+        if compare:
+            lines.append(f"Compare: {', '.join(str(tuple(cell)) for cell in compare)}")
+        else:
+            lines.append("Compare: no parent comparison on this step")
+        lines.append(f"Metric: {result_label} = {result_value}")
+        return lines

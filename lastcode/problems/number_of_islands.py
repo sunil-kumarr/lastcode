@@ -105,11 +105,23 @@ def _viz_visit(r: int, c: int) -> None:  # noqa: ARG001
     pass
 
 
+def _viz_probe(r: int, c: int) -> None:  # noqa: ARG001
+    pass
+
+
 def _viz_mark(r: int, c: int) -> None:  # noqa: ARG001
     pass
 
 
+def _viz_water(r: int, c: int) -> None:  # noqa: ARG001
+    pass
+
+
 def _viz_count(count: int) -> None:  # noqa: ARG001
+    pass
+
+
+def _viz_complete() -> None:
     pass
 
 
@@ -148,20 +160,27 @@ def _num_islands_ii_instrumented(grid: list[list[int]]) -> list[int]:
 
     ans = []
     for r, c in positions:
-        _viz_visit(r, c)
+        _viz_probe(r, c)
         grid[r][c] = 1
+        _viz_visit(r, c)
         parent[(r, c)] = (r, c)
         count += 1
+        _viz_mark(r, c)
         _viz_count(count)
 
         for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             nr, nc = r + dr, c + dc
+            if 0 <= nr < m and 0 <= nc < n:
+                _viz_probe(nr, nc)
             if 0 <= nr < m and 0 <= nc < n and grid[nr][nc] == 1:
                 _viz_mark(nr, nc)
                 if union((r, c), (nr, nc)):
                     count -= 1
                     _viz_count(count)
+            elif 0 <= nr < m and 0 <= nc < n:
+                _viz_water(nr, nc)
         ans.append(count)
+        _viz_complete()
     return ans
 
 

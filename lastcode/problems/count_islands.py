@@ -96,11 +96,23 @@ def _viz_visit(r: int, c: int) -> None:  # noqa: ARG001
     pass
 
 
+def _viz_probe(r: int, c: int) -> None:  # noqa: ARG001
+    pass
+
+
 def _viz_mark(r: int, c: int) -> None:  # noqa: ARG001
     pass
 
 
+def _viz_water(r: int, c: int) -> None:  # noqa: ARG001
+    pass
+
+
 def _viz_count(count: int) -> None:  # noqa: ARG001
+    pass
+
+
+def _viz_complete() -> None:
     pass
 
 
@@ -119,7 +131,12 @@ def _count_islands_instrumented(grid: list[list[int]]) -> int:
             return
         if c < 0 or c >= cols:
             return
-        if visited[r][c] or grid[r][c] == 0:
+        _viz_probe(r, c)
+        if visited[r][c]:
+            _viz_mark(r, c)
+            return
+        if grid[r][c] == 0:
+            _viz_water(r, c)
             return
         _viz_visit(r, c)
         visited[r][c] = True
@@ -135,6 +152,7 @@ def _count_islands_instrumented(grid: list[list[int]]) -> int:
                 dfs(r, c)
                 count += 1
                 _viz_count(count)
+                _viz_complete()
 
     return count
 

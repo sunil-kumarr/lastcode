@@ -339,14 +339,17 @@ class VisualizerScreen(Screen):
         # Update code pane
         code_pane = self.query_one("#code-pane", CodePane)
         
-        active_lineno = None
+        active_display_line = None
         for i in range(step, -1, -1):
-            if "lineno" in self._frames[i]:
-                active_lineno = self._frames[i]["lineno"]
+            if "display_line" in self._frames[i]:
+                active_display_line = self._frames[i]["display_line"]
                 break
-                
-        if active_lineno is not None:
-            code_pane.highlight_line(self._abs_lineno_to_display(active_lineno))
+            if "lineno" in self._frames[i]:
+                active_display_line = self._abs_lineno_to_display(self._frames[i]["lineno"])
+                break
+
+        if active_display_line is not None:
+            code_pane.highlight_line(active_display_line)
         else:
             code_pane.highlight_line(None)
 
@@ -394,7 +397,12 @@ class VisualizerScreen(Screen):
         for src_offset, src_line in enumerate(source_lines):
             abs_lineno = start_line + src_offset
             stripped_src = src_line.strip()
-            if not stripped_src or stripped_src.startswith('"""'):
+            if (
+                not stripped_src
+                or stripped_src.startswith('"""')
+                or stripped_src.startswith("#")
+                or "_viz_" in stripped_src
+            ):
                 continue
             while code_display_idx < len(self._problem.CODE_LINES):
                 if self._problem.CODE_LINES[code_display_idx].strip():
