@@ -1,13 +1,25 @@
 [project]
-name = "neonodes"
+name = "algo-visualizer-tui"
 version = "0.1.0"
+description = "An interactive Terminal User Interface (TUI) for real-time algorithm and data structure visualization"
+readme = "README.md"
+authors = [
+    { name = "Sunil Kumar", email = "sunindus.sk@gmail.com" }
+]
+keywords = ["algorithm", "visualizer", "tui", "terminal", "data-structures", "textual", "sorting"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Education",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
 requires-python = ">=3.11"
 dependencies = [
     "textual>=0.47.0",
 ]
 
 [project.scripts]
-neonodes = "neonodes.main:main"
+algo-vis = "neonodes.main:main" # This is the short command the user types to run it
 
 [build-system]
 requires = ["hatchling"]
