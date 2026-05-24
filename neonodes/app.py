@@ -11,7 +11,7 @@ from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.timer import Timer
-from textual.widgets import Footer, Input, Label
+from textual.widgets import Footer, Input, Label, TabbedContent, TabPane, Static
 
 from neonodes.theme import BG, SURFACE, BORDER, TEXT, DIM, BLUE, YELLOW, RED, SEL_BG
 from neonodes.widgets import CodePane, ScrubberBar, VariablesPanel, LegendWidget
@@ -46,10 +46,13 @@ def _load_problem(problem_id: str):
 class VisualizerScreen(Screen):
     """Full-screen visualizer — renderer-agnostic."""
 
+    AUTO_FOCUS = ""
+
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("left",   "prev_frame",    "◀ Prev",      show=True),
         Binding("right",  "next_frame",    "Next ▶",      show=True),
         Binding("space",  "toggle_play",   "Play/Pause",  show=True),
+        Binding("tab",    "toggle_tab",    "Toggle View", show=True),
         Binding("i",      "focus_input",   "Edit Input",  show=True),
         Binding("q",      "quit",          "Quit",        show=True),
         Binding("escape", "escape_action", "Home/Cancel", show=True),
@@ -71,6 +74,52 @@ class VisualizerScreen(Screen):
         height: 100%;
         layout: vertical;
         border: solid {BORDER};
+    }}
+
+    TabbedContent {{
+        height: 1fr;
+    }}
+
+    ContentSwitcher {{
+        height: 100%;
+    }}
+
+    TabPane {{
+        padding: 0;
+        height: 100%;
+        background: {SURFACE};
+    }}
+
+    #problem-desc {{
+        padding: 1 2;
+        overflow-y: auto;
+        height: 100%;
+        color: {TEXT};
+        background: {SURFACE};
+    }}
+
+    ContentTabs {{
+        display: none;
+    }}
+
+    ContentTab {{
+        color: {DIM};
+        text-style: bold;
+        padding: 0 2;
+    }}
+
+    ContentTab:hover {{
+        color: {TEXT};
+    }}
+
+    ContentTab.-active {{
+        color: {BLUE};
+        text-style: bold;
+    }}
+
+    Underline > .underline--bar {{
+        color: {BLUE};
+        background: {BLUE};
     }}
 
     #right-panel {{
@@ -207,7 +256,11 @@ class VisualizerScreen(Screen):
                     f"  {self._problem.TITLE}  [{self._problem.DIFFICULTY.upper()}]",
                     id="problem-title",
                 )
-                yield CodePane(self._problem.CODE_LINES, id="code-pane")
+                with TabbedContent(id="code-tabs"):
+                    with TabPane("Solution", id="solution-tab"):
+                        yield CodePane(self._problem.CODE_LINES, id="code-pane")
+                    with TabPane("Problem", id="problem-tab"):
+                        yield Static(self._problem.DESCRIPTION, id="problem-desc")
 
             with Vertical(id="right-panel"):
                 with Container(id="grid-container"):
@@ -238,15 +291,31 @@ class VisualizerScreen(Screen):
     def on_mount(self) -> None:
         self._lineno_map = self._build_lineno_map()
         self._apply_frame(0)
-        self.query_one("#grid-input", Input).blur()
 
-        self.query_one("#left-panel").border_title = "code"
+        # Disable focus on hidden tab bar widgets to prevent them from capturing left/right arrow keys
+        tabs = self.query_one("#code-tabs", TabbedContent)
+        for child in tabs.walk_children():
+            if child.__class__.__name__ in ("ContentTabs", "Tabs", "ContentTab", "Tab"):
+                child.can_focus = False
+
+        self.query_one("#grid-input", Input).blur()
+        self.set_focus(None)
+
+        self.query_one("#left-panel").border_title = "solution"
         self.query_one("#grid-container").border_title = "visualization"
         self.query_one("#vars-panel").border_title = "variables"
         self.query_one("#legend").border_title = "legend"
         self.query_one("#step-explanation").border_title = "step explanation"
         self.query_one("#input-bar").border_title = "input"
         self.query_one("#bottom-bar").border_title = "playback"
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        if event.tabbed_content.id == "code-tabs":
+            active_id = event.pane.id
+            if active_id == "solution-tab":
+                self.query_one("#left-panel").border_title = "solution"
+            elif active_id == "problem-tab":
+                self.query_one("#left-panel").border_title = "problem"
 
     # ------------------------------------------------------------------
     # Frame navigation
@@ -360,6 +429,16 @@ class VisualizerScreen(Screen):
         else:
             self._start_play()
 
+    def action_toggle_tab(self) -> None:
+        try:
+            tabs = self.query_one("#code-tabs", TabbedContent)
+        except Exception:
+            return
+        if tabs.active == "solution-tab":
+            tabs.active = "problem-tab"
+        else:
+            tabs.active = "solution-tab"
+
     def action_focus_input(self) -> None:
         self.query_one("#grid-input", Input).focus()
 
@@ -396,7 +475,7 @@ class VisualizerScreen(Screen):
         self.refresh_bindings()
 
     def check_action(self, action: str, parameters: tuple) -> bool | None:
-        normal_only = {"prev_frame", "next_frame", "toggle_play", "focus_input", "quit"}
+        normal_only = {"prev_frame", "next_frame", "toggle_play", "focus_input", "quit", "toggle_tab"}
         input_only  = {"submit_input"}
         if self._input_focused and action in normal_only:
             return False

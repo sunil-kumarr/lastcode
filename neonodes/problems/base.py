@@ -12,6 +12,18 @@ class ProblemModule(Protocol):
     DESCRIPTION: str
     DEFAULT_INPUT: Any   # grid, tree node, array, etc.
     CODE_LINES: list[str]
-    RENDERER: str        # "grid" | "tree" | "array"
+    RENDERER: str        # "grid" | "tree" | "array" | "sliding_window" | "two_pointer" | "stack" | "queue" | "linked_list"
 
     def run(self, input_data: Any) -> list[dict]: ...
+
+
+class ListNode:
+    def __init__(self, val: int = 0, next_node: ListNode | None = None, random_node: ListNode | None = None) -> None:
+        self.val = val
+        self.next = next_node
+        self.random = random_node
+        self.node_id = id(self)
+
+    def __repr__(self) -> str:
+        return f"Node({self.val})"
+

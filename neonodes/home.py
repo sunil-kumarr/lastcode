@@ -15,6 +15,18 @@ from neonodes.problems.registry import TOPICS, DIFFICULTIES, PROBLEMS
 from neonodes.theme import THEMES
 
 
+def format_topic(topic: str) -> str:
+    """Format snake_case topics as space-separated capitalized words (e.g. DP, Binary Tree)."""
+    words = topic.replace("_", " ").split()
+    capitalized = []
+    for w in words:
+        if w.lower() == "dp":
+            capitalized.append("DP")
+        else:
+            capitalized.append(w.capitalize())
+    return " ".join(capitalized)
+
+
 class HomeWidget(Widget):
     """Full-screen home widget with topic/difficulty filters and problem list."""
 
@@ -102,25 +114,25 @@ class HomeWidget(Widget):
         # Select boxes based on terminal width to prevent wrap-around
         if width >= 77:
             display_boxes = [
-                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("topic", "Topic [t]", 11, lambda: format_topic(self._topic), t_green if self._topic == "all" else t_yellow),
                 ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
                 ("sort", "Sort [s]", 13, lambda: self._sort_key + " ⬆", t_blue),
                 ("theme", "Theme [c]", 11, lambda: self._theme_name, t_blue),
             ]
         elif width >= 63:
             display_boxes = [
-                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("topic", "Topic [t]", 11, lambda: format_topic(self._topic), t_green if self._topic == "all" else t_yellow),
                 ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
                 ("sort", "Sort [s]", 13, lambda: self._sort_key + " ⬆", t_blue),
             ]
         elif width >= 47:
             display_boxes = [
-                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("topic", "Topic [t]", 11, lambda: format_topic(self._topic), t_green if self._topic == "all" else t_yellow),
                 ("difficulty", "Difficulty [d]", 16, lambda: self._difficulty.upper(), t_green if self._difficulty == "all" else t_yellow),
             ]
         else:
             display_boxes = [
-                ("topic", "Topic [t]", 11, lambda: self._topic.upper(), t_green if self._topic == "all" else t_yellow),
+                ("topic", "Topic [t]", 11, lambda: format_topic(self._topic), t_green if self._topic == "all" else t_yellow),
             ]
 
         fixed_w = sum(box[2] for box in display_boxes)
@@ -204,14 +216,15 @@ class HomeWidget(Widget):
         columns = [
             ("#", 4, lambda p, i: f"{i:2d} ", lambda p: t_dim),
             ("Name", 42, lambda p, i: p["title"], lambda p: t_text if p["available"] else t_dim),
-            ("Topic", 12, lambda p, i: p["topic"], lambda p: t_teal),
+            ("Topic", 12, lambda p, i: format_topic(p["topic"]), lambda p: t_teal),
             ("Difficulty", 12, lambda p, i: p["difficulty"], lambda p: t_red if p["difficulty"] == "hard" else (t_yellow if p["difficulty"] == "medium" else t_green)),
             ("Status", 14, lambda p, i: " • Available" if p["available"] else " • Coming Soon", lambda p: t_green if p["available"] else t_dim),
         ]
 
-        # Calculate dynamic Name column width
+        # Calculate dynamic Name column width (accounting for 2-space gaps and left margin)
         other_w = sum(w for col, w, _, _ in columns if col != "Name")
-        name_w = max(20, width - other_w - 4)
+        # 5 columns -> 4 gaps of 2 spaces = 8 spaces. Plus 2 spaces left margin = 10 spaces.
+        name_w = max(20, width - other_w - 10)
 
         # 3. Render Table Title
         filtered = self._filtered_and_sorted()
@@ -220,7 +233,7 @@ class HomeWidget(Widget):
         # 4. Render Table Header Row
         header_line = Text()
         header_line.append("  ")
-        for col, w, _, _ in columns:
+        for col_idx, (col, w, _, _) in enumerate(columns):
             col_name = col
             if col == "Name" and self._sort_key == "Name":
                 col_name += "▲"
@@ -231,6 +244,8 @@ class HomeWidget(Widget):
 
             disp_w = name_w if col == "Name" else w
             header_line.append(col_name.ljust(disp_w), style=f"bold {t_text}")
+            if col_idx < len(columns) - 1:
+                header_line.append("  ")
         header_line.append("\n")
         result.append(header_line)
 
@@ -264,7 +279,7 @@ class HomeWidget(Widget):
                 else:
                     row_text.append("  ")
 
-                for col, w, val_func, color_func in columns:
+                for col_idx, (col, w, val_func, color_func) in enumerate(columns):
                     val = val_func(problem, idx_abs + 1)
                     disp_w = name_w if col == "Name" else w
                     val_str = val[:disp_w].ljust(disp_w)
@@ -275,6 +290,8 @@ class HomeWidget(Widget):
                         c = color_func(problem)
 
                     row_text.append(val_str, style=c)
+                    if col_idx < len(columns) - 1:
+                        row_text.append("  ", style=f"on {bg}" if is_sel else "")
 
                 if is_sel:
                     row_text.stylize(f"on {bg}")
@@ -293,7 +310,7 @@ class HomeWidget(Widget):
             sel_problem = filtered[max(0, min(self._selected, len(filtered) - 1))]
             title = sel_problem["title"]
             diff = sel_problem["difficulty"].upper()
-            topic = sel_problem["topic"].upper()
+            topic = format_topic(sel_problem["topic"]).upper()
             
             result.append("▶ ", style=f"bold {t_blue}")
             result.append(f"{title}  ", style=f"bold {t_text}")
