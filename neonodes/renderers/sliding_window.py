@@ -256,7 +256,8 @@ class SlidingWindowWidget(Widget):
         res_val = states.get("res_val")
         if res_val is not None:
             var_name, var_data = res_val
-            result.append(f"\n  {var_name} = {var_data}\n", style=f"bold {GREEN}")
+            display = "∞" if var_data == float("inf") else str(var_data)
+            result.append(f"\n  {var_name} = {display}\n", style=f"bold {GREEN}")
 
         # Count lines for get_content_height
         line_count = result.plain.count("\n") + 1
