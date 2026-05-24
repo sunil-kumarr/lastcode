@@ -5,11 +5,11 @@ import importlib
 # Ensure the root folder is in the python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from neonodes.problems.registry import PROBLEM_MAP, PROBLEMS
-from neonodes.app import _load_renderer
+from lastcode.problems.registry import PROBLEM_MAP, PROBLEMS
+from lastcode.app import _load_renderer
 
 def verify_all():
-    print("Verifying neonodes problems and renderers...")
+    print("Verifying lastcode problems and renderers...")
     failed = 0
     passed = 0
     

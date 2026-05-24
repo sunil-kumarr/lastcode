@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import moving_average, recent_calls
-from neonodes.renderers.queue import QueueRenderer
+from lastcode.problems import moving_average, recent_calls
+from lastcode.renderers.queue import QueueRenderer
 
 def test_moving_average_flow():
     print("Testing Moving Average queue renderer flow...")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-dev.py — hot-reloading dev runner for neonodes.
-Watches the neonodes directory and restarts the TUI application on changes.
+dev.py — hot-reloading dev runner for lastcode.
+Watches the lastcode directory and restarts the TUI application on changes.
 """
 
 import os
@@ -22,9 +22,9 @@ def get_mtimes(directory):
     return mtimes
 
 def main():
-    # Target path is neonodes subdirectory relative to this file
+    # Target path is lastcode subdirectory relative to this file
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    watch_dir = os.path.join(base_dir, "neonodes")
+    watch_dir = os.path.join(base_dir, "lastcode")
     
     print(f"Watching '{watch_dir}' for changes...")
     
@@ -32,7 +32,7 @@ def main():
     proc = None
     
     # Run the application package
-    cmd = [sys.executable, "-m", "neonodes"]
+    cmd = [sys.executable, "-m", "lastcode"]
     
     try:
         proc = subprocess.Popen(cmd)

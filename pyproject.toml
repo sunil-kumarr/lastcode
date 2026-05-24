@@ -1,5 +1,5 @@
 [project]
-name = "algo-visualizer-tui"
+name = "lastcode-tui"
 version = "0.1.0"
 description = "An interactive Terminal User Interface (TUI) for real-time algorithm and data structure visualization"
 readme = "README.md"
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-algo-vis = "neonodes.main:main" # This is the short command the user types to run it
+lastcode = "lastcode.main:main" # This is the short command the user types to run it
 
 [build-system]
 requires = ["hatchling"]

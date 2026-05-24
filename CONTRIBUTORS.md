@@ -1,12 +1,12 @@
 # 👥 Contributors
 
-Thank you for your interest in contributing to **neonodes**! Below is a list of the contributors who have built and maintained this project, along with instructions on how you can get involved.
+Thank you for your interest in contributing to **lastcode**! Below is a list of the contributors who have built and maintained this project, along with instructions on how you can get involved.
 
 ---
 
 ## ✍️ Project Creator & Maintainer
 
-* **Sunil Kumar** ([@sunil-kumarr](https://github.com/sunil-kumarr)) — Creator, lead developer, and architect of neonodes.
+* **Sunil Kumar** ([@sunil-kumarr](https://github.com/sunil-kumarr)) — Creator, lead developer, and architect of lastcode.
 
 ---
 
@@ -20,8 +20,8 @@ If you find a bug or want to suggest a new feature, please open an issue first t
 ### 2. Fork and Clone
 Fork the repository to your own GitHub account and clone it locally:
 ```bash
-git clone https://github.com/your-username/neonodes.git
-cd neonodes
+git clone https://github.com/your-username/lastcode.git
+cd lastcode
 ```
 
 ### 3. Setup Development Environment
@@ -52,4 +52,4 @@ Push your branch to your fork and submit a PR to the main repository.
 
 ---
 
-*Thank you to everyone who helps make neonodes a better learning resource for developers!*
+*Thank you to everyone who helps make lastcode a better learning resource for developers!*

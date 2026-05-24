@@ -1,7 +1,7 @@
 import asyncio
 from textual.app import App
-from neonodes.app import VisualizerScreen
-from neonodes.problems import reverse_linked_list
+from lastcode.app import VisualizerScreen
+from lastcode.problems import reverse_linked_list
 
 class TestApp(App):
     def on_mount(self) -> None:

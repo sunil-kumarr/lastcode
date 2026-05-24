@@ -2,8 +2,8 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import min_size_subarray_sum
-from neonodes.renderers.sliding_window import SlidingWindowRenderer
+from lastcode.problems import min_size_subarray_sum
+from lastcode.renderers.sliding_window import SlidingWindowRenderer
 
 
 def test_min_subarray_sum_flow():

@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import reverse_linked_list, linked_list_cycle
-from neonodes.renderers.linked_list import LinkedListRenderer
+from lastcode.problems import reverse_linked_list, linked_list_cycle
+from lastcode.renderers.linked_list import LinkedListRenderer
 
 def test_reverse_linked_list_flow():
     print("Testing Reverse Linked List renderer flow...")

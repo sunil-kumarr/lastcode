@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import daily_temperatures, eval_rpn, asteroid_collision, next_greater_element, simplify_path
-from neonodes.renderers.stack import StackRenderer
+from lastcode.problems import daily_temperatures, eval_rpn, asteroid_collision, next_greater_element, simplify_path
+from lastcode.renderers.stack import StackRenderer
 
 def test_daily_temperatures_flow():
     print("Testing Daily Temperatures stack renderer flow...")

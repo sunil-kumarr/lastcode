@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import container_water
-from neonodes.renderers.two_pointer import TwoPointerRenderer
+from lastcode.problems import container_water
+from lastcode.renderers.two_pointer import TwoPointerRenderer
 
 def test_container_water_flow():
     print("Testing Container With Most Water step-by-step visualizer flow and variables...")

@@ -2,8 +2,8 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import longest_substring_no_repeat
-from neonodes.renderers.sliding_window import SlidingWindowRenderer
+from lastcode.problems import longest_substring_no_repeat
+from lastcode.renderers.sliding_window import SlidingWindowRenderer
 
 
 def test_longest_substr_flow():

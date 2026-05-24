@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import assign_cookies
-from neonodes.renderers.two_pointer import TwoPointerRenderer
+from lastcode.problems import assign_cookies
+from lastcode.renderers.two_pointer import TwoPointerRenderer
 
 def test_assign_cookies_flow():
     print("Testing Assign Cookies step-by-step visualizer flow and variables...")

@@ -4,8 +4,8 @@ import os
 # Add project root to sys.path if running directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from neonodes.problems import three_sum
-from neonodes.renderers.two_pointer import TwoPointerRenderer
+from lastcode.problems import three_sum
+from lastcode.renderers.two_pointer import TwoPointerRenderer
 
 def test_three_sum_flow():
     print("Testing 3Sum step-by-step visualizer flow and variables...")

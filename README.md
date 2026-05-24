@@ -1,8 +1,8 @@
-# 🌌 neonodes
+# 🌌 lastcode
 
 > A sleek, terminal-based interactive visualizer for tree, graph, grid, and array algorithms. Built with Python and the [Textual](https://github.com/Textualize/textual) framework.
 
-`neonodes` allows you to trace, step-through, and animate classic coding interview problems directly in your terminal with beautiful ANSI visuals, real-time variable inspection, a code stepper, and step-by-step explanations.
+`lastcode` allows you to trace, step-through, and animate classic coding interview problems directly in your terminal with beautiful ANSI visuals, real-time variable inspection, a code stepper, and step-by-step explanations.
 
 ---
 
@@ -40,8 +40,8 @@ The visualizer runs a sleek, modern Tokyonight-inspired aesthetic:
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/neonodes.git
-   cd neonodes
+   git clone https://github.com/your-username/lastcode.git
+   cd lastcode
    ```
 
 2. Create and activate a virtual environment:
@@ -62,11 +62,11 @@ The visualizer runs a sleek, modern Tokyonight-inspired aesthetic:
 ### Run the Visualizer
 Start the application from anywhere using the installed shortcut:
 ```bash
-neonodes
+lastcode
 ```
 Or run the module directly:
 ```bash
-python -m neonodes
+python -m lastcode
 ```
 
 ### Hot-Reloading for Development
@@ -124,10 +124,10 @@ Grids are parsed as 2D lists of `0`s (water) and `1`s (land).
 ## 📂 Project Structure
 
 ```text
-neonodes/
+lastcode/
 ├── dev.py                    # Hot-reloading watcher script
 ├── pyproject.toml            # Project dependencies and script endpoints
-├── neonodes/
+├── lastcode/
 │   ├── main.py               # Main entrypoint
 │   ├── app.py                # Main visualizer screens and layout controllers
 │   ├── home.py               # Home screen widgetry and filters

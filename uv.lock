@@ -53,7 +53,7 @@ wheels = [
 ]
 
 [[package]]
-name = "neonodes"
+name = "lastcode"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

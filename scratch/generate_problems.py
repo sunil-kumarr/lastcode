@@ -2,7 +2,7 @@ import os
 import sys
 import textwrap
 
-problems_dir = "/Users/sunilkumar/Downloads/neonodes/neonodes/problems"
+problems_dir = "/Users/sunilkumar/Downloads/lastcode/lastcode/problems"
 os.makedirs(problems_dir, exist_ok=True)
 
 problems_data = []
@@ -2630,7 +2630,7 @@ return recorder.record(
 build_chain_helpers = """
 def build_list(arr):
     if not arr: return None
-    from neonodes.problems.base import ListNode
+    from lastcode.problems.base import ListNode
     nodes = [ListNode(val) for val in arr]
     for i in range(len(nodes) - 1):
         nodes[i].next = nodes[i+1]
@@ -2638,7 +2638,7 @@ def build_list(arr):
 
 def build_list_cycle(arr, pos):
     if not arr: return None
-    from neonodes.problems.base import ListNode
+    from lastcode.problems.base import ListNode
     nodes = [ListNode(val) for val in arr]
     for i in range(len(nodes) - 1):
         nodes[i].next = nodes[i+1]
@@ -2731,7 +2731,7 @@ problems_data.append({
     ],
     "line_map": "{i: i for i in range(1, 12)}",
     "instrumented_body": """
-from neonodes.problems.base import ListNode
+from lastcode.problems.base import ListNode
 dummy = ListNode(0)
 curr = dummy
 while list1 is not None and list2 is not None:
@@ -2860,7 +2860,7 @@ problems_data.append({
     ],
     "line_map": "{i: i for i in range(1, 9)}",
     "instrumented_body": """
-from neonodes.problems.base import ListNode
+from lastcode.problems.base import ListNode
 dummy = ListNode(0, head)
 slow = dummy
 fast = dummy
@@ -3014,7 +3014,7 @@ problems_data.append({
     "line_map": "{i: i for i in range(1, 14)}",
     "instrumented_body": """
 if not head: return None
-from neonodes.problems.base import ListNode
+from lastcode.problems.base import ListNode
 curr = head
 mapping = {}
 while curr:
@@ -3061,7 +3061,7 @@ return recorder.record(
     "extra_helpers": """
 def build_list_random(arr):
     if not arr: return None
-    from neonodes.problems.base import ListNode
+    from lastcode.problems.base import ListNode
     nodes = [ListNode(val[0]) for val in arr]
     for i in range(len(nodes) - 1):
         nodes[i].next = nodes[i+1]
@@ -3099,7 +3099,7 @@ problems_data.append({
     ],
     "line_map": "{i: i for i in range(1, 14)}",
     "instrumented_body": """
-from neonodes.problems.base import ListNode
+from lastcode.problems.base import ListNode
 dummy = ListNode(0)
 curr = dummy
 carry = 0
@@ -3199,7 +3199,7 @@ return recorder.record(
     "extra_helpers": """
 def build_intersect_lists(arrA, arrB, skipA, skipB):
     if not arrA or not arrB: return None, None
-    from neonodes.problems.base import ListNode
+    from lastcode.problems.base import ListNode
     nodesA = [ListNode(val) for val in arrA[:skipA]]
     nodesB = [ListNode(val) for val in arrB[:skipB]]
     nodesCommon = [ListNode(val) for val in arrA[skipA:]]
@@ -3344,9 +3344,9 @@ for p in problems_data:
     clean_run = textwrap.dedent(p['run_handlers'].strip("\n"))
     indented_run = "\n".join("    " + line if line else "" for line in clean_run.split("\n"))
     
-    content = f"""\"\"\"{p['title']} — Neonodes visualizer problem module.\"\"\"
+    content = f"""\"\"\"{p['title']} — lastcode visualizer problem module.\"\"\"
 from __future__ import annotations
-from neonodes.recorder import Recorder
+from lastcode.recorder import Recorder
 
 TITLE = {repr(p['title'])}
 CATEGORY = {repr(p['topic'])}
