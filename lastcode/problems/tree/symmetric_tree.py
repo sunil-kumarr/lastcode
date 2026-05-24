@@ -99,6 +99,8 @@ def _symmetric_tree_instrumented(root: "_TreeNode") -> bool:
     if not root:
         return True
 
+    _viz_enter(root.node_id, root.val)
+
     def is_mirror(t1: "_TreeNode | None", t2: "_TreeNode | None") -> bool:
         if not t1 and not t2:
             return True

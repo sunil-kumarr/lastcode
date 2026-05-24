@@ -16,7 +16,7 @@ DESCRIPTION = (
     "Input is a level-order array with None for missing nodes."
 )
 
-DEFAULT_INPUT = [1, 2, 3]
+DEFAULT_INPUT = [-10, 9, 20, None, None, 15, 7, None, None, 3, 4, None, None, 6, 8]
 
 CODE_LINES = [
     "def max_path_sum(root):",

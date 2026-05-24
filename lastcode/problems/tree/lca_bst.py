@@ -14,7 +14,7 @@ DESCRIPTION = (
     "Input is (list, target) where target encodes p and q as p*10 + q (e.g., 26 for 2 and 6)."
 )
 
-DEFAULT_INPUT = ([4, 2, 6, 1, 3, 5, 7], 26)
+DEFAULT_INPUT = ([8, 4, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15], 57)
 
 CODE_LINES = [
     "def lowest_common_ancestor(root, p, q):",

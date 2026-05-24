@@ -15,7 +15,7 @@ DESCRIPTION = (
     "Input is a level-order array with None for missing nodes."
 )
 
-DEFAULT_INPUT = [4, 2, 6, 1, 3, 5, 7]
+DEFAULT_INPUT = [8, 4, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15]
 
 CODE_LINES = [
     "def diameter_of_binary_tree(root):",

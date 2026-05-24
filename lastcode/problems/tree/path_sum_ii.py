@@ -15,7 +15,7 @@ DESCRIPTION = (
     "Input is a (list, target) tuple."
 )
 
-DEFAULT_INPUT = ([4, 2, 6, 1, 3, 5, 7], 9)
+DEFAULT_INPUT = ([5, 4, 8, 11, None, 13, 4, 7, 2, None, None, 5, 1], 22)
 
 CODE_LINES = [
     "def path_sum(root, targetSum):",

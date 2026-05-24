@@ -15,7 +15,7 @@ DESCRIPTION = (
     "Input is a level-order array with None for missing nodes."
 )
 
-DEFAULT_INPUT = [4, 9, 0, 5, 1]
+DEFAULT_INPUT = [4, 9, 0, 5, 1, 2, 6, None, None, 3, 7, None, None, 8, 9]
 
 CODE_LINES = [
     "def sum_numbers(root):",

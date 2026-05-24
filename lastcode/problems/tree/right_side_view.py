@@ -15,7 +15,7 @@ DESCRIPTION = (
     "Input is a level-order array with None for missing nodes."
 )
 
-DEFAULT_INPUT = [1, 2, 3, None, 5, None, 4]
+DEFAULT_INPUT = [1, 2, 3, 4, None, 5, 6, None, 7, None, None, 8, 9, None, 10]
 
 CODE_LINES = [
     "def right_side_view(root):",

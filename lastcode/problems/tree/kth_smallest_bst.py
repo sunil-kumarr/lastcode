@@ -15,7 +15,7 @@ DESCRIPTION = (
     "Input is a (list, k) tuple."
 )
 
-DEFAULT_INPUT = ([4, 2, 6, 1, 3, 5, 7], 3)
+DEFAULT_INPUT = ([8, 4, 12, 2, 6, 10, 14, 1, 3, 5, 7, 9, 11, 13, 15], 8)
 
 CODE_LINES = [
     "def kth_smallest(root, k):",
