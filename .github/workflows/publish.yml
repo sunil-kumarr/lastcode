@@ -1,0 +1,40 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published] # Triggers automatically when you draft and publish a GitHub Release
+
+jobs:
+  build-and-publish:
+    name: Build and Publish Python Dist to PyPI
+    runs-on: ubuntu-latest
+    
+    # Associate this job with the secure environment we created
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lastcode-tui # Swaps to your package link upon creation
+    
+    # MANDATORY FOR TRUSTED PUBLISHING: Permits OIDC token exchange
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Build Source and Wheel Distributions
+        run: uv build
+
+      - name: Publish Package Distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
