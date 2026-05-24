@@ -7,6 +7,10 @@
 ---
 
 ## ✨ Features
+<img width="1230" height="644" alt="image" src="https://github.com/user-attachments/assets/565bbfe4-b06d-492d-8eb4-22b455f7fe2e" />
+<img width="1240" height="752" alt="image" src="https://github.com/user-attachments/assets/4fdf0410-5308-4935-b036-157e77861031" />
+<img width="1282" height="854" alt="image" src="https://github.com/user-attachments/assets/7ec60df0-b88c-407e-ba15-c09b7d5fcf62" />
+
 
 * **Interactive ASCII Renderers**: Visualized trees, grids, and arrays respond dynamically as the algorithm executes.
 * **Trace-Driven Replay**: Leverages Python's execution tracing (`sys.settrace`) to record and reconstruct step-by-step algorithm states.
