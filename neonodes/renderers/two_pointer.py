@@ -57,6 +57,10 @@ class TwoPointerWidget(Widget):
     }}
     """
 
+    def get_content_height(self, container, viewport, width) -> int:
+        """Tell Textual exactly how many rows we need so the widget is never clipped."""
+        return max(12, getattr(self, "_content_lines", 12))
+
     def __init__(self, input_data, **kwargs) -> None:
         super().__init__(**kwargs)
         self._input_data = input_data
@@ -67,6 +71,7 @@ class TwoPointerWidget(Widget):
         self._anim_frames = []
         self._anim_timer = None
         self._current_step_id = None
+        self._content_lines = 12
 
     def update_state(self, input_data, states: dict) -> None:
         self._input_data = input_data
@@ -277,6 +282,133 @@ class TwoPointerWidget(Widget):
                     result.append("       ", style=DIM)
             result.append("\n")
 
+        # Bar Chart for Container with most water and Trapping Rain Water
+        sequence_key = states.get("sequence_key")
+        accumulated_locals = states.get("accumulated_locals", {})
+        
+        is_container_water = (sequence_key == "height" and "max_area" in accumulated_locals)
+        is_trapping_water = (sequence_key == "height" and "water" in accumulated_locals)
+        
+        if (is_container_water or is_trapping_water) and len(sequence) > 0:
+            l_idx = pointers.get("left")
+            r_idx = pointers.get("right")
+            
+            # Calculate water heights for each column
+            water_heights = [0] * len(sequence)
+            if l_idx is not None and r_idx is not None:
+                if is_container_water:
+                    h_bound = min(sequence[l_idx], sequence[r_idx])
+                    for idx in range(l_idx + 1, r_idx):
+                        water_heights[idx] = max(0, h_bound - sequence[idx])
+                elif is_trapping_water:
+                    # Prefix maxes up to left
+                    left_maxes = []
+                    curr_max = 0
+                    for val in sequence:
+                        curr_max = max(curr_max, val)
+                        left_maxes.append(curr_max)
+                    # Suffix maxes from right to end
+                    right_maxes = [0] * len(sequence)
+                    curr_max = 0
+                    for i in range(len(sequence) - 1, -1, -1):
+                        curr_max = max(curr_max, sequence[i])
+                        right_maxes[i] = curr_max
+                    
+                    for idx in range(len(sequence)):
+                        if idx <= l_idx:
+                            water_heights[idx] = max(0, left_maxes[idx] - sequence[idx])
+                        elif idx >= r_idx:
+                            water_heights[idx] = max(0, right_maxes[idx] - sequence[idx])
+
+            # Determine maximum value
+            max_val = max(sequence) if sequence else 0
+            
+            # Compute blocks and styles for each column
+            tower_blocks = []
+            water_blocks = []
+            col_styles = []
+            
+            for idx, val in enumerate(sequence):
+                # Calculate tower block height
+                if max_val == 0:
+                    t_b = 0
+                elif max_val <= 10:
+                    t_b = val
+                else:
+                    t_b = max(1, int(round(val * 10 / max_val))) if val > 0 else 0
+                tower_blocks.append(t_b)
+                
+                # Calculate total height (tower + water) and water block height
+                w_val = water_heights[idx]
+                if w_val == 0:
+                    w_b = 0
+                else:
+                    if max_val <= 10:
+                        total_b = val + w_val
+                    else:
+                        total_val = val + w_val
+                        total_b = max(1, int(round(total_val * 10 / max_val))) if total_val > 0 else 0
+                    w_b = max(0, total_b - t_b)
+                water_blocks.append(w_b)
+                
+                # Determine styling
+                ptr_color = TEXT
+                cell_ptrs = []
+                if idx == l_idx: cell_ptrs.append("left")
+                if idx == r_idx: cell_ptrs.append("right")
+                for name, v in pointers.items():
+                    if v == idx and name not in cell_ptrs:
+                        cell_ptrs.append(name)
+                
+                if cell_ptrs:
+                    ptr_color = YELLOW if len(cell_ptrs) > 1 else get_pointer_color(cell_ptrs[0])
+                    style_str = f"bold {ptr_color}"
+                else:
+                    style_str = TEXT
+                col_styles.append(style_str)
+
+            # grid_height = tallest column (pure blocks only — no label rows inside)
+            grid_height = max((t_b + w_b for t_b, w_b in zip(tower_blocks, water_blocks)), default=0)
+
+            if grid_height > 0:
+                result.append("\n\n")  # Spacer before chart
+
+                # --- Block rows ONLY (top to bottom) — no labels inside ---
+                for h in range(grid_height, 0, -1):
+                    result.append("   ", style=DIM)
+                    for idx in range(len(sequence)):
+                        t_b = tower_blocks[idx]
+                        w_b = water_blocks[idx]
+                        style_str = col_styles[idx]
+
+                        if h <= t_b:
+                            result.append(" ████ ", style=style_str)
+                        elif h <= t_b + w_b:
+                            result.append(" ░░░░ ", style=f"bold {BLUE}")
+                        else:
+                            result.append("      ")
+                        result.append(" ")
+                    result.append("\n")
+
+                # Base line
+                result.append("   " + "═" * (len(sequence) * 7 - 1) + "\n", style=DIM)
+
+                # Height values below baseline (x-axis), styled per pointer
+                result.append("   ", style=DIM)
+                for idx, val in enumerate(sequence):
+                    style_str = col_styles[idx]
+                    s = str(val)
+                    label = f" {s:^4} " if len(s) <= 4 else f"{s:^6}"
+                    result.append(label, style=style_str)
+                    result.append(" ")
+                result.append("\n")
+
+                # Index row below heights
+                result.append("   ", style=DIM)
+                for idx in range(len(sequence)):
+                    result.append(f"{idx:^6} ", style=DIM)
+                result.append("\n")
+
         # Comparison line
         if comparison:
             result.append(f"\n  {comparison}\n", style=f"bold {TEAL}")
@@ -286,6 +418,13 @@ class TwoPointerWidget(Widget):
         if res_val is not None:
             var_name, var_data = res_val
             result.append(f"\n  {var_name} = {var_data}\n", style=f"bold {GREEN}")
+
+        # Count lines so get_content_height can return the correct value
+        line_count = result.plain.count("\n") + 1
+        if line_count != self._content_lines:
+            self._content_lines = line_count
+            # Schedule a layout refresh so the container re-allocates height
+            self.call_after_refresh(self.refresh, layout=True)
 
         return result
 
@@ -311,7 +450,7 @@ class TwoPointerRenderer:
         for frame in frames:
             locals_val = frame.get("locals", {})
             for k in locals_val.keys():
-                if not k.startswith("_") and k not in ("nums", "numbers", "s", "height", "arr"):
+                if not k.startswith("_"):
                     all_var_names.add(k)
                     
         # 2. Accumulate most recent variable values up to up_to
@@ -321,8 +460,9 @@ class TwoPointerRenderer:
             locals_val = frame.get("locals", {})
             
             # Find the active sequence (list/string/tuple) from local variables
-            for key in ("nums", "numbers", "height", "s", "arr"):
+            for key in ("nums", "numbers", "height", "g", "arr", "s"):
                 if key in locals_val:
+                    sequence_key = key
                     # Keep track of previous sequence state before update
                     if current_sequence is not None and locals_val[key] != current_sequence:
                         prev_sequence = current_sequence
@@ -338,7 +478,7 @@ class TwoPointerRenderer:
 
             # Accumulate other variable values
             for k, v in locals_val.items():
-                if not k.startswith("_") and k not in ("nums", "numbers", "s", "height", "arr"):
+                if not k.startswith("_"):
                     accumulated_vars[k] = v
 
             # Accumulate res value
@@ -363,13 +503,14 @@ class TwoPointerRenderer:
         current_frame = frames[up_to]
         current_frame["accumulated_locals"] = accumulated_vars
         current_frame["all_var_names"] = list(all_var_names)
+        current_frame["sequence_key"] = sequence_key
 
         # Detect if we are on a sorting line
         is_sorting = False
         if current_frame.get("type") == "line" and "filename" in current_frame:
             import linecache
             line_content = linecache.getline(current_frame["filename"], current_frame["lineno"]).strip()
-            if "nums.sort()" in line_content or "numbers.sort()" in line_content or "arr.sort()" in line_content:
+            if any(term in line_content for term in ("nums.sort()", "numbers.sort()", "arr.sort()", "g.sort()")):
                 is_sorting = True
 
         if is_sorting and current_sequence is not None:
@@ -387,6 +528,8 @@ class TwoPointerRenderer:
             "is_sorting": is_sorting,
             "step": up_to,
             "res_val": res_val,
+            "sequence_key": sequence_key,
+            "accumulated_locals": accumulated_vars,
         }
 
     def filter_frames(self, frames: list[dict]) -> list[dict]:
@@ -433,19 +576,20 @@ class TwoPointerRenderer:
     def variable_entries(self, frame: dict) -> list[tuple[str, str, str]]:
         accumulated = frame.get("accumulated_locals", frame.get("locals", {}))
         all_vars = frame.get("all_var_names", list(accumulated.keys()))
+        sequence_key = frame.get("sequence_key")
         
         entries = []
         pointer_keys = ["i", "j", "k", "left", "right", "l", "r", "slow", "fast", "curr", "low", "mid", "high"]
         
         # Collect pointers first
         for k in pointer_keys:
-            if k in all_vars or k in accumulated:
+            if (k in all_vars or k in accumulated) and k != sequence_key:
                 val = accumulated.get(k, "—")
                 entries.append((k, str(val), get_pointer_color(k)))
                 
-        # Then other variables
+        # Then other variables (excluding the active sequence variable itself)
         other_keys = sorted([k for k in (all_vars + list(accumulated.keys())) 
-                             if k not in pointer_keys and k not in ("nums", "numbers", "s", "height", "arr")])
+                             if k not in pointer_keys and k != sequence_key])
         # Deduplicate other keys while preserving order
         seen = set()
         other_keys = [x for x in other_keys if not (x in seen or seen.add(x))]

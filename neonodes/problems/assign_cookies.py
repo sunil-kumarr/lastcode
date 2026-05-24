@@ -7,7 +7,7 @@ CATEGORY = 'two_pointer'
 DIFFICULTY = 'easy'
 RENDERER = 'two_pointer'
 DESCRIPTION = 'Assume you are a awesome parent and want to give your cookies. But, you should give each child at most one cookie. Return the maximum number of children content.'
-DEFAULT_INPUT = ([1, 2, 3], [1, 1])
+DEFAULT_INPUT = ([3, 1, 2], [1, 2])
 
 CODE_LINES = ['def find_content_children(g, s):', '    g.sort(); s.sort()', '    left, right = 0, 0', '    while left < len(g) and right < len(s):', '        if s[right] >= g[left]:', '            left += 1', '        right += 1', '    return left']
 _LINE_MAP = {i: i for i in range(1, 9)}
