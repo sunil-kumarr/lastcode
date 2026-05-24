@@ -1,6 +1,6 @@
 [project]
 name = "lastcode-tui"
-version = "0.1.1"
+version = "0.1.2"
 description = "An interactive Terminal User Interface (TUI) for real-time algorithm and data structure visualization"
 readme = "README.md"
 authors = [
